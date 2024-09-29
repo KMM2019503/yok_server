@@ -13,6 +13,8 @@ model Task {
   content  String
   author   User   @relation(fields: [authorId], references: [id])
   authorId String @db.ObjectId
+
+  @@map("tasks")
 }
 
 model User {
@@ -20,4 +22,6 @@ model User {
   email String  @unique
   name  String?
   tasks Task[]
+
+  @@map("users")
 }
