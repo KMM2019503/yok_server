@@ -16,7 +16,6 @@ const corsOptions = {
     callback: (err: Error | null, allow?: boolean) => void
   ) {
     if (whitelist.includes(origin || null)) {
-      logger.debug(origin);
       callback(null, true); // Allow the request
     } else {
       // Log the error and send a 403 Forbidden response
