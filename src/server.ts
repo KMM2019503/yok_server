@@ -6,14 +6,15 @@ import express, {
 } from "express";
 import logger from "./v1/utils/logger"; // Import the logger
 import routes from "./v1/routes"; // Import your routes
+import applyMiddlewares from "./v1/middlewares";
 
 dotenv.config(); // Load environment variables
 
 const startServer = () => {
   const app = express();
 
-  // Middleware to parse incoming JSON requests
-  app.use(express.json());
+  // apply middlewares
+  applyMiddlewares(app);
 
   // Ensure port is a number
   const port: number = parseInt(process.env.PORT || "3000", 10);
