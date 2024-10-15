@@ -1,0 +1,98 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Status {
+  ONLINE
+  OFFLINE
+  AWAY
+}
+
+model User {
+  id                  String               @id @default(auto()) @map("_id") @db.ObjectId
+  phone               String               @unique
+  userName            String               @map("user_name")
+  profilePictureUrl   String?              @map("profile_picture_url")
+  status              Status
+  sentMessages        Message[]            @relation("SentMessages")
+  conversationMembers ConversationMember[]
+  adminChannels       Channel[]            @relation("AdminChannels")
+  channelMembers      ChannelMember[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  @@map("users")
+}
+
+model Conversation {
+  id           String               @id @default(auto()) @map("_id") @db.ObjectId
+  members      ConversationMember[]
+  messages     Message[]
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  lastActivity DateTime             @default(now())
+
+  @@map("conversations")
+}
+
+model ConversationMember {
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  user           User         @relation(fields: [userId], references: [id])
+  userId         String       @db.ObjectId
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversationId String       @db.ObjectId
+  joinedAt       DateTime     @default(now())
+
+  @@unique([userId, conversationId])
+  @@map("conversation_members")
+}
+
+model Message {
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  sender         User          @relation("SentMessages", fields: [senderId], references: [id])
+  senderId       String        @db.ObjectId
+  content        String
+  photoUrl       String?
+  fileUrl        String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id])
+  conversationId String?       @db.ObjectId
+  channel        Channel?      @relation(fields: [channelId], references: [id])
+  channelId      String?       @db.ObjectId
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@map("messages")
+}
+
+model Channel {
+  id           String          @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  description  String?
+  isPublic     Boolean         @default(true)
+  messages     Message[]
+  admin        User            @relation("AdminChannels", fields: [adminId], references: [id])
+  adminId      String          @db.ObjectId
+  members      ChannelMember[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  lastActivity DateTime        @default(now())
+
+  @@map("channels")
+}
+
+model ChannelMember {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String   @db.ObjectId
+  channel   Channel  @relation(fields: [channelId], references: [id])
+  channelId String   @db.ObjectId
+  joinedAt  DateTime @default(now())
+
+  @@unique([userId, channelId])
+  @@map("channel_members")
+}
