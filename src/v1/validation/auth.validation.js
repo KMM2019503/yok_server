@@ -18,3 +18,14 @@ export const signUpSchema = Joi.object({
     "string.uri": "Profile picture URL must be a valid URI",
   }),
 });
+
+export const loginSchema = Joi.object({
+  phone: Joi.string()
+    .pattern(/^[0-9]{10,15}$/) // Phone number should be between 10 and 15 digits
+    .required()
+    .messages({
+      "string.pattern.base":
+        "Phone number must contain only digits and be 10-15 characters long",
+      "string.empty": "Phone number is required",
+    }),
+});

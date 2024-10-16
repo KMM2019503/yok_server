@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { signUpSchema } from "../validation/auth.validation";
+import { loginSchema, signUpSchema } from "../validation/auth.validation";
 import bcrypt from "bcrypt";
 import { generateJwtTokenAndSetCookie } from "../utils/generateJwtTokenAndSetCookie.utils";
 import { ValidationError } from "../utils/validationErrors";
@@ -33,7 +33,7 @@ export const signUp = async (data, res) => {
       },
     });
 
-    generateJwtTokenAndSetCookie(res, newUser.id); // This should work now
+    generateJwtTokenAndSetCookie(res, newUser.id);
 
     return {
       id: newUser.id,
@@ -44,8 +44,41 @@ export const signUp = async (data, res) => {
     };
   } catch (err) {
     console.error("Error occurred during sign-up:", err);
-    throw err; // Rethrow or handle the error as needed
+    throw err;
   }
 };
 
-export const login = (data) => {};
+export const login = async (data, res) => {
+  try {
+    const { error } = loginSchema.validate(data, { abortEarly: false });
+
+    if (error) {
+      const validationErrors = error.details.map((detail) => detail.message);
+      console.log("🚀 ~ login ~ validationErrors:", validationErrors);
+      throw new ValidationError(validationErrors.join(", "));
+    }
+
+    const { phone } = data;
+
+    // Find user by phone
+    const existingUser = await prisma.user.findUnique({ where: { phone } });
+
+    if (!existingUser) {
+      throw new NotFoundError("User not found");
+    }
+
+    // Generate JWT and set cookie
+    generateJwtTokenAndSetCookie(res, existingUser.id);
+
+    return {
+      id: existingUser.id,
+      phone: existingUser.phone,
+      userName: existingUser.userName,
+      profilePictureUrl: existingUser.profilePictureUrl,
+      status: existingUser.status,
+    };
+  } catch (err) {
+    console.error("Error occurred during login:", err);
+    throw err;
+  }
+};
