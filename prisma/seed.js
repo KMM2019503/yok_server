@@ -130,7 +130,6 @@ async function main() {
       userId: user1.id,
       contactId: user2.id,
       createdAt: new Date(),
-      updatedAt: new Date(),
     },
   });
 
@@ -139,7 +138,6 @@ async function main() {
       userId: user2.id,
       contactId: user1.id,
       createdAt: new Date(),
-      updatedAt: new Date(),
     },
   });
 }
