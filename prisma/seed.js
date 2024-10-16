@@ -123,6 +123,25 @@ async function main() {
       updatedAt: new Date(),
     },
   });
+
+  // Seed Contacts
+  await prisma.contact.create({
+    data: {
+      userId: user1.id,
+      contactId: user2.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  });
+
+  await prisma.contact.create({
+    data: {
+      userId: user2.id,
+      contactId: user1.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  });
 }
 
 main()

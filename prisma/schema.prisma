@@ -22,8 +22,13 @@ model User {
   conversationMembers ConversationMember[]
   adminChannels       Channel[]            @relation("AdminChannels")
   channelMembers      ChannelMember[]
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  // represents the list of users that the current user has added as contacts.
+  contacts            Contact[]            @relation("UserContacts")
+
+  // represents the list of users who have added the current user as a contact.
+  addedContacts Contact[] @relation("AddedContacts")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@map("users")
 }
@@ -95,4 +100,19 @@ model ChannelMember {
 
   @@unique([userId, channelId])
   @@map("channel_members")
+}
+
+model Contact {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  // A reference to the User who owns the contact list (the one who added the contact).
+  user   User   @relation("UserContacts", fields: [userId], references: [id])
+  userId String @db.ObjectId
+
+  // A reference to the User who has been added as a contact
+  contact   User     @relation("AddedContacts", fields: [contactId], references: [id])
+  contactId String   @db.ObjectId
+  createdAt DateTime @default(now())
+
+  @@unique([userId, contactId])
+  @@map("contacts")
 }
