@@ -1,8 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { loginSchema, signUpSchema } from "../validation/auth.validation";
-import bcrypt from "bcrypt";
 import { generateJwtTokenAndSetCookie } from "../utils/generateJwtTokenAndSetCookie.utils";
 import { ValidationError } from "../utils/validationErrors";
+import logger from "../utils/logger";
 
 const prisma = new PrismaClient();
 
@@ -12,7 +12,7 @@ export const signUp = async (data, res) => {
 
     if (error) {
       const validationErrors = error.details.map((detail) => detail.message);
-      console.log("🚀 ~ signUp ~ validationErrors:", validationErrors);
+      logger.error("🚀 ~ signUp ~ validationErrors:", validationErrors);
       throw new ValidationError(validationErrors.join(", "));
     }
 
@@ -43,7 +43,7 @@ export const signUp = async (data, res) => {
       status: newUser.status,
     };
   } catch (err) {
-    console.error("Error occurred during sign-up:", err);
+    logger.error("Error occurred during sign-up:", err);
     throw err;
   }
 };
@@ -54,7 +54,7 @@ export const login = async (data, res) => {
 
     if (error) {
       const validationErrors = error.details.map((detail) => detail.message);
-      console.log("🚀 ~ login ~ validationErrors:", validationErrors);
+      logger.error("login ~ validationErrors:", validationErrors);
       throw new ValidationError(validationErrors.join(", "));
     }
 
@@ -78,7 +78,7 @@ export const login = async (data, res) => {
       status: existingUser.status,
     };
   } catch (err) {
-    console.error("Error occurred during login:", err);
+    logger.error("��� ~ Error occurred during login ~ err:", err);
     throw err;
   }
 };
