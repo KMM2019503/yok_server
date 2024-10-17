@@ -6,7 +6,7 @@ export const checkToken = (req, res, next) => {
   if (!AuthToken) {
     return res.status(401).json({
       success: false,
-      message: "Unauthorized - You have no token",
+      message: "Unauthorized - You have not permission to access this route",
     });
   }
 
