@@ -1,6 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 import logger from "../utils/logger";
-import { createChannelSchema } from "../validation/channel.validation";
+import {
+  createChannelSchema,
+  updateChannelSchema,
+} from "../validation/channel.validation";
 import { ValidationError } from "../utils/validationErrors";
 
 const prisma = new PrismaClient();
@@ -9,8 +12,6 @@ export const createChannelService = async (req) => {
   try {
     // Destructure the request to get userId and body
     const { userId, body } = req;
-
-    console.log("🚀 ~ createChannelService ~ userId:", userId);
 
     // Validate the incoming data using Joi schema
     const { error } = createChannelSchema.validate(body, { abortEarly: false });
@@ -79,8 +80,11 @@ export const createChannelService = async (req) => {
 
 export const getAllChannelsService = async (req) => {
   try {
+    console.log("🚀 ~ running getAllChannelsService");
     const { userId } = req;
     const { page = 1, size = 15 } = req.params; // Default values for pagination
+
+    console.log("Running getAllChannelsService with userId:", userId);
 
     // Calculate offset for pagination
     const skip = (page - 1) * size;
@@ -111,7 +115,8 @@ export const getChannel = async (req) => {
     const skip = (page - 1) * size;
     const take = Number(size);
 
-    // Fetch the channel details along with paginated messages
+    console.log("running getChannelService");
+
     const channel = await prisma.channel.findUnique({
       where: { id: channelId },
       include: {
@@ -159,6 +164,199 @@ export const getChannel = async (req) => {
     };
   } catch (error) {
     logger.error("🚀 ~ getChannel ~ error:", error);
+    throw error;
+  }
+};
+
+export const updateChannelService = async (req) => {
+  try {
+    const { channelId, body } = req;
+
+    // Validate the incoming data using Joi schema
+    const { error } = updateChannelSchema.validate(body, { abortEarly: false });
+    if (error) {
+      const validationErrors = error.details.map((detail) => detail.message);
+      logger.error("🚀 ~ updateChannelService ~ validation error:", error);
+      throw new ValidationError(validationErrors.join(", "));
+    }
+
+    // Check if the channel exists
+    const channel = await prisma.channel.findUnique({
+      where: { id: channelId },
+    });
+
+    if (!channel) {
+      throw new Error("Channel not found");
+    }
+
+    // Destructure the data to update
+    const { name, description, isPublic, profilePictureUrl } = body;
+
+    // Update the channel with the provided data
+    const updatedChannel = await prisma.channel.update({
+      where: { id: channelId },
+      data: {
+        ...(name && { name }),
+        ...(description && { description }),
+        ...(isPublic !== undefined && { isPublic }),
+        ...(profilePictureUrl && { profilePictureUrl }),
+      },
+    });
+
+    logger.info(`Channel updated successfully: ${channelId}`);
+    return updatedChannel;
+  } catch (error) {
+    logger.error("🚀 ~ updateChannelService ~ error:", error);
+    throw error;
+  }
+};
+
+export const addAdminService = async (req) => {
+  try {
+    const { body, channelId } = req;
+    const { adminIds } = body; // Get adminIds array from the request body
+
+    if (!adminIds || adminIds.length === 0) {
+      throw new Error("No admin IDs provided");
+    }
+
+    // Check if the channel exists
+    const channel = await prisma.channel.findUnique({
+      where: { id: channelId },
+      select: { adminIds: true },
+    });
+
+    if (!channel) {
+      throw new Error("Channel not found");
+    }
+
+    // Filter out admin IDs that are already present in the existing array
+    const newAdminIds = adminIds.filter(
+      (adminId) => !channel.adminIds.includes(adminId)
+    );
+
+    if (newAdminIds.length === 0) {
+      throw new Error("All provided users are already admins");
+    }
+
+    // Add the new admin IDs to the existing adminIds array
+    const updatedChannel = await prisma.channel.update({
+      where: { id: channelId },
+      data: {
+        adminIds: {
+          push: newAdminIds, // Use the push operator to add newAdminIds array to the existing adminIds
+        },
+      },
+    });
+
+    // Add new admins as channel members if they are not already members
+    await Promise.all(
+      newAdminIds.map(async (adminId) => {
+        const isMember = await prisma.channelMember.findUnique({
+          where: {
+            userId_channelId: {
+              userId: adminId,
+              channelId: channelId,
+            },
+          },
+        });
+
+        if (!isMember) {
+          await prisma.channelMember.create({
+            data: {
+              userId: adminId,
+              channelId: channelId,
+              joinedAt: new Date(),
+            },
+          });
+        }
+      })
+    );
+
+    logger.info(
+      `Admins added successfully: ${newAdminIds} to channel ${channelId}`
+    );
+    return updatedChannel;
+  } catch (error) {
+    logger.error("Error in addAdminService:", error);
+    throw error;
+  }
+};
+
+export const removeAdminService = async (req) => {
+  try {
+    const { body, channelId } = req;
+    const { adminIds } = body; // Get adminIds array from the request body
+
+    // Check if the channel exists
+    const channel = await prisma.channel.findUnique({
+      where: { id: channelId },
+      select: { adminIds: true },
+    });
+
+    if (!channel) {
+      throw new Error("Channel not found");
+    }
+
+    // Filter out admin IDs that are present in the existing array
+    const updatedAdminIds = channel.adminIds.filter(
+      (id) => !adminIds.includes(id)
+    );
+
+    if (updatedAdminIds.length === channel.adminIds.length) {
+      throw new Error("None of the provided users are currently admins");
+    }
+
+    // Update the channel with the new adminIds array
+    const updatedChannel = await prisma.channel.update({
+      where: { id: channelId },
+      data: {
+        adminIds: updatedAdminIds,
+      },
+    });
+
+    logger.info(
+      `Admins removed successfully: ${adminIds} from channel ${channelId}`
+    );
+    return updatedChannel;
+  } catch (error) {
+    logger.error("Error in removeAdminService:", error);
+    throw error;
+  }
+};
+
+export const deleteChannelService = async (req) => {
+  try {
+    const { channelId } = req.params;
+
+    // Check if the channel exists
+    const channel = await prisma.channel.findUnique({
+      where: { id: channelId },
+    });
+
+    if (!channel) {
+      throw new Error("Channel not found");
+    }
+
+    // Delete associated members first to maintain data integrity
+    await prisma.channelMember.deleteMany({
+      where: { channelId: channelId },
+    });
+
+    // Delete associated messages
+    await prisma.message.deleteMany({
+      where: { channelId: channelId },
+    });
+
+    // Finally, delete the channel itself
+    const deletedChannel = await prisma.channel.delete({
+      where: { id: channelId },
+    });
+
+    logger.info(`Channel deleted successfully: ${channelId}`);
+    return deletedChannel;
+  } catch (error) {
+    logger.error("🚀 ~ deleteChannelService ~ error:", error);
     throw error;
   }
 };
