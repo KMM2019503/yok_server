@@ -9,7 +9,7 @@ const server = http.createServer(app);
 const onlineUsers = {}; // Object to store online users
 
 // Function to get receiver socket ID
-export const getReceiverSocketId = (recId) => {
+const getReceiverSocketId = (recId) => {
   return onlineUsers[recId];
 };
 
@@ -65,4 +65,4 @@ io.on("connection", (socket) => {
 });
 
 // Export app and server for use in other modules
-export { app, server, io };
+export { app, server, io, getReceiverSocketId };

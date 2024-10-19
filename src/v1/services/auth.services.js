@@ -20,7 +20,7 @@ export const signUp = async (data, res) => {
     const existingUser = await prisma.user.findUnique({ where: { phone } });
 
     if (existingUser) {
-      throw new ConflictError("User with this phone number already exists");
+      throw new Error("User with this phone number already exists");
     }
 
     const newUser = await prisma.user.create({
