@@ -12,7 +12,6 @@ export const signUp = async (data, res) => {
 
     if (error) {
       const validationErrors = error.details.map((detail) => detail.message);
-      logger.error("🚀 ~ signUp ~ validationErrors:", validationErrors);
       throw new ValidationError(validationErrors.join(", "));
     }
 
@@ -43,7 +42,6 @@ export const signUp = async (data, res) => {
       status: newUser.status,
     };
   } catch (err) {
-    logger.error("Error occurred during sign-up:", err);
     throw err;
   }
 };
@@ -64,7 +62,7 @@ export const login = async (data, res) => {
     const existingUser = await prisma.user.findUnique({ where: { phone } });
 
     if (!existingUser) {
-      throw new NotFoundError("User not found");
+      throw new Error("User with this phone number does not exist");
     }
 
     // Generate JWT and set cookie
@@ -78,7 +76,6 @@ export const login = async (data, res) => {
       status: existingUser.status,
     };
   } catch (err) {
-    logger.error("��� ~ Error occurred during login ~ err:", err);
     throw err;
   }
 };
