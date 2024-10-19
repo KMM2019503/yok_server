@@ -18,6 +18,7 @@ model User {
   userName            String               @map("user_name")
   profilePictureUrl   String?              @map("profile_picture_url")
   status              Status
+  lastActiveAt        DateTime?            @map("last_active_at")
   sentMessages        Message[]            @relation("SentMessages")
   conversationMembers ConversationMember[]
   adminChannels       Channel[]            @relation("AdminChannels")

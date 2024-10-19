@@ -82,17 +82,30 @@ export const getAllChannelsService = async (req) => {
   try {
     console.log("🚀 ~ running getAllChannelsService");
     const { userId } = req;
-    const { page = 1, size = 15 } = req.params; // Default values for pagination
+    const { page = 1, size = 15, isSuperAdmin, isAdmin } = req.params; // Default values for pagination
 
     console.log("Running getAllChannelsService with userId:", userId);
 
     // Calculate offset for pagination
     const skip = (page - 1) * size;
 
+    // Build the filter conditions
+    const conditions = {
+      members: { some: { userId: userId } },
+    };
+
+    // If filtering by superAdmin, add the condition
+    if (isSuperAdmin) {
+      conditions.superAdminId = userId;
+    }
+
+    // If filtering by admin, add the condition
+    if (isAdmin) {
+      conditions.adminIds = { has: userId };
+    }
+
     const channels = await prisma.channel.findMany({
-      where: {
-        members: { some: { userId: userId } },
-      },
+      where: conditions,
       skip: skip, // Skip calculated number of records
       take: Number(size), // Limit number of records returned
     });

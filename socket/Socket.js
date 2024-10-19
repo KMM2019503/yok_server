@@ -2,6 +2,7 @@ import { Server } from "socket.io";
 import http from "http";
 import express from "express";
 import logger from "../src/v1/utils/logger";
+import { Prisma } from "@prisma/client";
 
 const app = express();
 const server = http.createServer(app);
@@ -15,7 +16,7 @@ export const getReceiverSocketId = (recId) => {
 // Initialize socket.io server
 const io = new Server(server, {
   cors: {
-    origin: ["*"], // Allow requests from this origin
+    origin: ["*"],
     methods: ["GET", "POST"],
   },
 });
@@ -29,6 +30,16 @@ io.on("connection", (socket) => {
   if (userId && userId !== "undefined") {
     onlineUsers[userId] = socket.id; // Store the socket ID associated with the user ID
     logger.info(`User connected: ${socket.id}, User ID: ${userId}`);
+
+    // Update user status to ONLINE and set last active time
+    Prisma.user.update({
+      where: { id: userId },
+      data: {
+        status: "ONLINE",
+        lastActiveAt: new Date(),
+      },
+    });
+
     io.emit("pullOnlineUsers", Object.keys(onlineUsers)); // Notify all clients about the updated list of online users
   } else {
     logger.warn("User ID is undefined or invalid.");
@@ -39,6 +50,15 @@ io.on("connection", (socket) => {
     logger.info(`User disconnected: ${socket.id}`);
     if (userId && onlineUsers[userId]) {
       delete onlineUsers[userId]; // Remove the user from the online users list
+
+      // Update user status to OFFLINE
+      prisma.user.update({
+        where: { id: userId },
+        data: {
+          status: "OFFLINE",
+        },
+      });
+
       io.emit("pullOnlineUsers", Object.keys(onlineUsers)); // Notify all clients about the updated list of online users
     }
   });
