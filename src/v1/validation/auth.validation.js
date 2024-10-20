@@ -2,11 +2,11 @@ import Joi from "joi";
 
 export const signUpSchema = Joi.object({
   phone: Joi.string()
-    .pattern(/^[0-9]{10,15}$/) // Phone number should be between 10 and 15 digits
+    .pattern(/^\+?[0-9]{10,15}$/)
     .required()
     .messages({
       "string.pattern.base":
-        "Phone number must contain only digits and be 10-15 characters long",
+        "Phone number must contain only digits and be 10-15 characters long, with an optional leading '+'",
       "string.empty": "Phone number is required",
     }),
   userName: Joi.string().min(3).max(30).required().messages({
@@ -21,11 +21,11 @@ export const signUpSchema = Joi.object({
 
 export const loginSchema = Joi.object({
   phone: Joi.string()
-    .pattern(/^[0-9]{10,15}$/) // Phone number should be between 10 and 15 digits
+    .pattern(/^\+?[0-9]{10,15}$/)
     .required()
     .messages({
       "string.pattern.base":
-        "Phone number must contain only digits and be 10-15 characters long",
+        "Phone number must contain only digits and be 10-15 characters long, with an optional leading '+'",
       "string.empty": "Phone number is required",
     }),
 });

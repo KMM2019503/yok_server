@@ -7,6 +7,7 @@ import {
   getMessagesByChannelId,
   getMessagesByGroupId,
   sendDmMessage,
+  updateMessageStatus,
 } from "../controllers/message.controller";
 
 const router = Router();

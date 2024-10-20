@@ -2,10 +2,11 @@ import { Server } from "socket.io";
 import http from "http";
 import express from "express";
 import logger from "../src/v1/utils/logger";
-import { Prisma } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const app = express();
 const server = http.createServer(app);
+const prisma = new PrismaClient();
 const onlineUsers = {}; // Object to store online users
 
 // Function to get receiver socket ID
@@ -25,6 +26,7 @@ logger.info("WebSocket server started");
 
 // Handle incoming socket connections
 io.on("connection", (socket) => {
+  logger.info("A new connection attempt detected");
   const userId = socket.handshake.query.userId; // Get user ID from the connection
 
   if (userId && userId !== "undefined") {
@@ -32,7 +34,7 @@ io.on("connection", (socket) => {
     logger.info(`User connected: ${socket.id}, User ID: ${userId}`);
 
     // Update user status to ONLINE and set last active time
-    Prisma.user.update({
+    prisma.user.update({
       where: { id: userId },
       data: {
         status: "ONLINE",
@@ -44,6 +46,33 @@ io.on("connection", (socket) => {
   } else {
     logger.warn("User ID is undefined or invalid.");
   }
+
+  // Listen for the "markMessageAsRead" event
+  socket.on("markMessageAsRead", async (messageId) => {
+    try {
+      // Update the message status to 'READ'
+      const updatedMessage = await prisma.message.update({
+        where: { id: messageId },
+        data: { status: "READ" },
+      });
+
+      // Notify the receiver if they are online
+      const senderScoketId = getReceiverSocketId(updatedMessage.senderId);
+
+      // check if the sender is online
+      if (senderScoketId) {
+        io.to(senderScoketId).emit("messageStatusUpdated", updatedMessage);
+      }
+
+      console.log("sender is offline");
+    } catch (error) {
+      logger.error("Error updating message status via WebSocket:", error);
+    }
+  });
+
+  socket.on("testing", (data) => {
+    console.log("🚀 ~ socket.on ~ testing ~data:", data);
+  });
 
   // Handle user disconnection
   socket.on("disconnect", () => {

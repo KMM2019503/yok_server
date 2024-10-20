@@ -63,6 +63,10 @@ export const sendDmMessageService = async (req) => {
 
     // Emit the new message to the relevant recipient socket
     if (receiverSocketId) {
+      console.log(
+        "🚀 ~ sendDmMessageService ~ receiverSocketId:",
+        receiverSocketId
+      );
       io.to(receiverSocketId).emit("newMessage", message);
 
       // Update status to DELIVERED when the receiver gets the message
