@@ -16,7 +16,7 @@ export const login = async (data, res) => {
       throw new ValidationError(validationErrors.join(", "));
     }
 
-    // Extract ID token from the request
+    // Extract ID token that is gottern from firebase from the request
     const { idToken } = data;
 
     // Verify Firebase ID token
