@@ -1,10 +1,14 @@
 import dotenv from "dotenv";
-import express, { type Request, type Response, type NextFunction } from "express";
+import express, {
+  type Request,
+  type Response,
+  type NextFunction,
+} from "express";
 import logger from "./v1/utils/logger"; // Import the logger
 import routes from "./v1/routes"; // Import your routes
 import applyMiddlewares from "./v1/middlewares";
 import cookieParser from "cookie-parser";
-import { app, server } from '../socket/Socket.js';
+import { app, server } from "../socket/Socket.js";
 
 dotenv.config(); // Load environment variables
 
@@ -17,7 +21,7 @@ if (isNaN(port)) {
 
 const startServer = () => {
   app.use(express.json());
-  app.use(cookieParser()); 
+  app.use(cookieParser());
 
   // Apply middlewares
   applyMiddlewares(app);
