@@ -3,6 +3,7 @@ import http from "http";
 import express from "express";
 import logger from "../src/v1/utils/logger";
 import { PrismaClient } from "@prisma/client";
+import { checkToken } from "../src/v1/middlewares/checkAuth"; // Import the checkAuth middleware
 
 const app = express();
 const server = http.createServer(app);
@@ -23,6 +24,11 @@ const io = new Server(server, {
 });
 
 logger.info("WebSocket server started");
+
+// Apply the checkAuth middleware to each incoming connection
+io.use((socket, next) => {
+  checkToken(socket.handshake, {}, next);
+});
 
 // Handle incoming socket connections
 io.on("connection", (socket) => {
