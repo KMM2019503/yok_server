@@ -1,50 +1,10 @@
 import { PrismaClient } from "@prisma/client";
-import { loginSchema, signUpSchema } from "../validation/auth.validation";
-import { generateJwtTokenAndSetCookie } from "../utils/generateJwtTokenAndSetCookie.utils";
+import { loginSchema } from "../validation/auth.validation";
 import { ValidationError } from "../utils/validationErrors";
 import logger from "../utils/logger";
+import admin from "../utils/firebase";
 
 const prisma = new PrismaClient();
-
-export const signUp = async (data, res) => {
-  try {
-    const { error } = signUpSchema.validate(data, { abortEarly: false });
-
-    if (error) {
-      const validationErrors = error.details.map((detail) => detail.message);
-      throw new ValidationError(validationErrors.join(", "));
-    }
-
-    const { phone, userName, profilePictureUrl } = data;
-
-    const existingUser = await prisma.user.findUnique({ where: { phone } });
-
-    if (existingUser) {
-      throw new Error("User with this phone number already exists");
-    }
-
-    const newUser = await prisma.user.create({
-      data: {
-        phone,
-        userName,
-        profilePictureUrl,
-        status: "OFFLINE",
-      },
-    });
-
-    generateJwtTokenAndSetCookie(res, newUser.id);
-
-    return {
-      id: newUser.id,
-      phone: newUser.phone,
-      userName: newUser.userName,
-      profilePictureUrl: newUser.profilePictureUrl,
-      status: newUser.status,
-    };
-  } catch (err) {
-    throw err;
-  }
-};
 
 export const login = async (data, res) => {
   try {
@@ -56,26 +16,41 @@ export const login = async (data, res) => {
       throw new ValidationError(validationErrors.join(", "));
     }
 
-    const { phone } = data;
+    // Extract ID token from the request
+    const { idToken } = data;
 
-    // Find user by phone
-    const existingUser = await prisma.user.findUnique({ where: { phone } });
+    // Verify Firebase ID token
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const { uid, phone_number } = decodedToken;
+
+    // Check if the user exists in the database
+    let existingUser = await prisma.user.findUnique({
+      where: { firebaseUserId: uid },
+    });
 
     if (!existingUser) {
-      throw new Error("User with this phone number does not exist");
+      // Create a new user if they do not exist
+      existingUser = await prisma.user.create({
+        data: {
+          firebaseUserId: uid,
+          phone: phone_number,
+          // Add additional fields if needed
+        },
+      });
     }
 
-    // Generate JWT and set cookie
-    generateJwtTokenAndSetCookie(res, existingUser.id);
-
     return {
-      id: existingUser.id,
-      phone: existingUser.phone,
-      userName: existingUser.userName,
-      profilePictureUrl: existingUser.profilePictureUrl,
-      status: existingUser.status,
+      success: true,
+      user: {
+        id: existingUser.id,
+        phone: existingUser.phone,
+        userName: existingUser.userName,
+        profilePictureUrl: existingUser.profilePictureUrl,
+        status: existingUser.status,
+      },
     };
   } catch (err) {
+    logger.error("login ~ error:", err);
     throw err;
   }
 };
