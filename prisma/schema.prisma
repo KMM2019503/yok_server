@@ -7,18 +7,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
-enum Status {
-  ONLINE
-  OFFLINE
-}
-
 model User {
   id                  String               @id @default(auto()) @map("_id") @db.ObjectId
   firebaseUserId      String               @unique @map("firebase_user_id")
   phone               String               @unique
   userName            String?              @map("user_name")
   profilePictureUrl   String?              @map("profile_picture_url")
-  status              Status?
   lastActiveAt        DateTime?            @map("last_active_at")
   sentMessages        Message[]            @relation("SentMessages")
   conversationMembers ConversationMember[]

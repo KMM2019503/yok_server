@@ -11,13 +11,13 @@ const prisma = new PrismaClient();
 export const createChannelService = async (req) => {
   try {
     // Destructure the request to get userId and body
-    const { userId, body } = req;
+    const { body } = req;
+    const { userId } = req.header;
 
     // Validate the incoming data using Joi schema
     const { error } = createChannelSchema.validate(body, { abortEarly: false });
     if (error) {
       const validationErrors = error.details.map((detail) => detail.message);
-      logger.error("🚀 ~ createChannelService ~ error:", error);
       throw new ValidationError(validationErrors.join(", "));
     }
 
@@ -69,8 +69,10 @@ export const createChannelService = async (req) => {
       where: { id: newChannel.id },
     });
 
-    // Return the newly created channel with members
-    return channel;
+    return {
+      success: true,
+      channel,
+    };
   } catch (error) {
     // Handle any errors during the process
     logger.error("🚀 ~ createChannelService ~ error:", error);
@@ -80,11 +82,8 @@ export const createChannelService = async (req) => {
 
 export const getAllChannelsService = async (req) => {
   try {
-    console.log("🚀 ~ running getAllChannelsService");
-    const { userId } = req;
+    const { userId } = req.header;
     const { page = 1, size = 15, isSuperAdmin, isAdmin } = req.params; // Default values for pagination
-
-    console.log("Running getAllChannelsService with userId:", userId);
 
     // Calculate offset for pagination
     const skip = (page - 1) * size;
@@ -167,6 +166,7 @@ export const getChannel = async (req) => {
 
     // Return the channel with paginated message data and pagination info
     return {
+      success: true,
       channel,
       pagination: {
         currentPage: page,
@@ -216,8 +216,11 @@ export const updateChannelService = async (req) => {
       },
     });
 
-    logger.info(`Channel updated successfully: ${channelId}`);
-    return updatedChannel;
+    // return updatedChannel;
+    return {
+      success: true,
+      channel: updatedChannel,
+    };
   } catch (error) {
     logger.error("🚀 ~ updateChannelService ~ error:", error);
     throw error;
@@ -227,7 +230,7 @@ export const updateChannelService = async (req) => {
 export const addAdminService = async (req) => {
   try {
     const { body, channelId } = req;
-    const { adminIds } = body; // Get adminIds array from the request body
+    const { adminIds } = body;
 
     if (!adminIds || adminIds.length === 0) {
       throw new Error("No admin IDs provided");
@@ -289,7 +292,10 @@ export const addAdminService = async (req) => {
     logger.info(
       `Admins added successfully: ${newAdminIds} to channel ${channelId}`
     );
-    return updatedChannel;
+    return {
+      success: true,
+      channel: updatedChannel,
+    };
   } catch (error) {
     logger.error("Error in addAdminService:", error);
     throw error;
@@ -299,7 +305,7 @@ export const addAdminService = async (req) => {
 export const removeAdminService = async (req) => {
   try {
     const { body, channelId } = req;
-    const { adminIds } = body; // Get adminIds array from the request body
+    const { adminIds } = body;
 
     // Check if the channel exists
     const channel = await prisma.channel.findUnique({
@@ -331,9 +337,11 @@ export const removeAdminService = async (req) => {
     logger.info(
       `Admins removed successfully: ${adminIds} from channel ${channelId}`
     );
-    return updatedChannel;
+    return {
+      success: true,
+      channel: updatedChannel,
+    };
   } catch (error) {
-    logger.error("Error in removeAdminService:", error);
     throw error;
   }
 };
@@ -367,7 +375,10 @@ export const deleteChannelService = async (req) => {
     });
 
     logger.info(`Channel deleted successfully: ${channelId}`);
-    return deletedChannel;
+    return {
+      success: true,
+      channel: deletedChannel,
+    };
   } catch (error) {
     logger.error("🚀 ~ deleteChannelService ~ error:", error);
     throw error;

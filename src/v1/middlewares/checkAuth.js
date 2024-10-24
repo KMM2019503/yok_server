@@ -3,6 +3,7 @@ import logger from "../utils/logger";
 
 export const checkToken = async (req, res, next) => {
   const authHeader = req.headers.authorization; // Extract the Authorization header
+  // req.headers.userId
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({

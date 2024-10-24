@@ -89,7 +89,10 @@ export const sendDmMessageService = async (req) => {
       },
     });
 
-    return message;
+    return {
+      success: true,
+      message,
+    };
   } catch (error) {
     logger.error("Error sending direct message:", error);
     throw new Error("Failed to send direct message");

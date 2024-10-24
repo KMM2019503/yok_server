@@ -23,7 +23,10 @@ export const updateUserService = async (req) => {
       },
     });
     // Respond with the updated user data
-    return updatedUser;
+    return {
+      success: true,
+      user: updatedUser,
+    };
   } catch (error) {
     throw error;
   }
