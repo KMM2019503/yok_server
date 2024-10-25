@@ -6,21 +6,21 @@ import admin from "../utils/firebase";
 
 const prisma = new PrismaClient();
 
-export const login = async (data, res) => {
+export const login = async (req, res) => {
   try {
-    const { error } = loginSchema.validate(data, { abortEarly: false });
+    // const { error } = loginSchema.validate(req.headers, { abortEarly: false });
 
-    if (error) {
-      const validationErrors = error.details.map((detail) => detail.message);
-      logger.error("login ~ validationErrors:", validationErrors);
-      throw new ValidationError(validationErrors.join(", "));
-    }
+    // if (error) {
+    //   const validationErrors = error.details.map((detail) => detail.message);
+    //   logger.error("login ~ validationErrors:", validationErrors);
+    //   throw new ValidationError(validationErrors.join(", "));
+    // }
 
-    // Extract ID token that is gottern from firebase from the request
-    const { idToken } = data;
+    const authHeader = req.headers.authorization; // Extract the Authorization header
+    const authToken = authHeader.split(" ")[1];
 
     // Verify Firebase ID token
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const decodedToken = await admin.auth().verifyIdToken(authToken);
     const { uid, phone_number } = decodedToken;
 
     // Check if the user exists in the database
@@ -51,6 +51,9 @@ export const login = async (data, res) => {
     };
   } catch (err) {
     logger.error("login ~ error:", err);
-    throw err;
+    return {
+      success: false,
+      error: err,
+    };
   }
 };
