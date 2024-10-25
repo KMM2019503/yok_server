@@ -1,5 +1,4 @@
 import { PrismaClient } from "@prisma/client";
-import { updateContact } from "../controllers/contact.controller";
 
 const prisma = new PrismaClient();
 
@@ -109,41 +108,49 @@ export const createListContactsService = async (req) => {
     throw new Error("User not found");
   }
 
-  const createdContacts = [];
+  // Step 1: Get all the phone numbers from user_contacts
+  const phoneNumbers = user_contacts.map((contact) => contact.phone);
 
-  for (const contactData of user_contacts) {
-    const { phone, name } = contactData;
+  // Step 2: Find all existing users in the database that match the phone numbers
+  const existingUsers = await prisma.user.findMany({
+    where: { phone: { in: phoneNumbers } },
+  });
 
-    const contactUser = await prisma.user.findUnique({
-      where: { phone },
-    });
+  // Step 3: Create a map of existing users by phone number for quick lookup
+  const existingUsersMap = new Map(
+    existingUsers.map((user) => [user.phone, user])
+  );
 
-    if (!contactUser) {
-      continue;
-    }
+  // Step 4: Filter out contacts whose users are not found in the database
+  const filteredContacts = user_contacts.filter((contact) =>
+    existingUsersMap.has(contact.phone)
+  );
 
-    const existingContact = await prisma.contact.findUnique({
-      where: {
-        userId_contactId: {
+  // Step 5: Perform upsert operations concurrently using Promise.all
+  const createdContacts = await Promise.all(
+    filteredContacts.map(async (contactData) => {
+      const { phone, name } = contactData;
+      const contactUser = existingUsersMap.get(phone);
+
+      // Upsert the contact
+      return prisma.contact.upsert({
+        where: {
+          userId_contactId: {
+            userId: userid,
+            contactId: contactUser.id,
+          },
+        },
+        update: {
+          displayName: name || null, // Update displayName if the contact already exists
+        },
+        create: {
           userId: userid,
           contactId: contactUser.id,
+          displayName: name || null, // Create a new contact if it doesn't exist
         },
-      },
-    });
-
-    if (existingContact) {
-      continue;
-    }
-
-    const newContact = await prisma.contact.create({
-      data: {
-        userId: userid,
-        contactId: contactUser.id,
-        displayName: name || null,
-      },
-    });
-    createdContacts.push(newContact);
-  }
+      });
+    })
+  );
 
   return {
     success: true,
