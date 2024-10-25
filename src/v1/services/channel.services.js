@@ -12,7 +12,7 @@ export const createChannelService = async (req) => {
   try {
     // Destructure the request to get userId and body
     const { body } = req;
-    const { userId } = req.header;
+    const { userid } = req.header;
 
     // Validate the incoming data using Joi schema
     const { error } = createChannelSchema.validate(body, { abortEarly: false });
@@ -31,8 +31,8 @@ export const createChannelService = async (req) => {
         description,
         isPublic: isPublic ?? true, // Use the provided value or default to true
         profilePictureUrl,
-        createdById: userId,
-        superAdminId: userId,
+        createdById: userid,
+        superAdminId: userid,
         adminIds: adminIds ?? [], // Use an empty array if no admin IDs are provided
         lastActivity: new Date(),
       },
@@ -42,7 +42,7 @@ export const createChannelService = async (req) => {
 
     const channelMembersData = [
       {
-        userId,
+        userId: userid,
         channelId: newChannel.id,
         joinedAt: new Date(),
       },
@@ -82,7 +82,7 @@ export const createChannelService = async (req) => {
 
 export const getAllChannelsService = async (req) => {
   try {
-    const { userId } = req.header;
+    const { userid } = req.header;
     const { page = 1, size = 15, isSuperAdmin, isAdmin } = req.params; // Default values for pagination
 
     // Calculate offset for pagination
@@ -90,17 +90,17 @@ export const getAllChannelsService = async (req) => {
 
     // Build the filter conditions
     const conditions = {
-      members: { some: { userId: userId } },
+      members: { some: { userId: userid } },
     };
 
     // If filtering by superAdmin, add the condition
     if (isSuperAdmin) {
-      conditions.superAdminId = userId;
+      conditions.superAdminId = userid;
     }
 
     // If filtering by admin, add the condition
     if (isAdmin) {
-      conditions.adminIds = { has: userId };
+      conditions.adminIds = { has: userid };
     }
 
     const channels = await prisma.channel.findMany({

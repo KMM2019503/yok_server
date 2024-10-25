@@ -6,7 +6,8 @@ import { getReceiverSocketId, io } from "../../../socket/Socket";
 const prisma = new PrismaClient();
 
 export const sendDmMessageService = async (req) => {
-  const { userId, body } = req;
+  const { userid } = req.header;
+  const { body } = req;
   const { content, conversationId, photoUrl, fileUrls, receiverId } = body;
 
   try {
@@ -20,7 +21,7 @@ export const sendDmMessageService = async (req) => {
           members: {
             create: [
               {
-                userId: userId,
+                userId: userid,
               },
               {
                 userId: receiverId,
@@ -47,7 +48,7 @@ export const sendDmMessageService = async (req) => {
         : content;
 
     const messageData = {
-      senderId: userId,
+      senderId: userid,
       content,
       conversationId: conversation.id,
       photoUrl: photoUrl || [],

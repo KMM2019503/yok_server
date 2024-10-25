@@ -4,7 +4,8 @@ const prisma = new PrismaClient();
 
 export const updateUserService = async (req) => {
   try {
-    const { userId, body } = req;
+    const { userid } = req.header;
+    const { body } = req;
 
     // Validate the userId and body if necessary
     if (!body) {
@@ -13,7 +14,7 @@ export const updateUserService = async (req) => {
 
     // Update user in the database
     const updatedUser = await prisma.user.update({
-      where: { id: userId },
+      where: { id: userid },
       data: {
         // Only update the fields that are provided in the body
         phone: body.phone,

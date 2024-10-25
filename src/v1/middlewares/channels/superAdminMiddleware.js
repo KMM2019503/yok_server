@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 export const isSuperAdmin = async (req, res, next) => {
   try {
-    const { userId } = req.header;
+    const { userid } = req.header;
     const { channelId } = req.params;
 
     // Check if the current user is the super admin of the channel
@@ -19,9 +19,9 @@ export const isSuperAdmin = async (req, res, next) => {
       return res.status(404).json({ message: "Channel not found" });
     }
 
-    if (channel.superAdminId !== userId) {
+    if (channel.superAdminId !== userid) {
       logger.warn(
-        `User ${userId} is not the super admin of channel ${channelId}`
+        `User ${userid} is not the super admin of channel ${channelId}`
       );
       return res
         .status(403)
