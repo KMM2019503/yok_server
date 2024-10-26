@@ -17,8 +17,6 @@ router.use("/messages", MessageRoutes)
 router.use("/conversations", ConversationRoutes)
 router.use('/contacts', ContactRoutes)
 
-
-
 // Add other routes here
 
 export default router;

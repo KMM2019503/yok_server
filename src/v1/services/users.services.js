@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import logger from "../utils/logger";
+import { removeSpacingOnPhoneNumber } from "../utils/helper";
 const prisma = new PrismaClient();
 
 export const updateUserService = async (req) => {
@@ -53,4 +54,37 @@ export const deleteUserService = async (req) => {
     logger.error("Error deleting user:", error);
     throw error;
   }
+};
+
+export const fetchUserByPhoneNumberService = async (req) => {
+  let { phoneNumber } = req.params;
+
+  // Remove any spaces from the phone number
+  phoneNumber = removeSpacingOnPhoneNumber(phoneNumber);
+
+  // Validate phone number format: must start with '+' followed by digits
+  const phoneRegex = /^\+\d+$/;
+  if (!phoneRegex.test(phoneNumber)) {
+    throw new Error(
+      "Invalid phone number format. The phone number should start with '+' followed by digits."
+    );
+  }
+
+  // Fetch the user from the database using Prisma
+  const user = await prisma.user.findUnique({
+    where: {
+      phone: phoneNumber,
+    },
+  });
+
+  // If no user is found, return an appropriate response
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  // Return the found user
+  return {
+    success: true,
+    user: user,
+  };
 };

@@ -3,12 +3,12 @@ import { loginSchema } from "../validation/auth.validation";
 import { ValidationError } from "../utils/validationErrors";
 import logger from "../utils/logger";
 import admin from "../utils/firebase";
+import { removeSpacingOnPhoneNumber } from "../utils/helper";
 
 const prisma = new PrismaClient();
 
 export const login = async (req, res) => {
   try {
-    logger.debug("login routed called");
     // const { error } = loginSchema.validate(req.headers, { abortEarly: false });
 
     // if (error) {
@@ -24,6 +24,8 @@ export const login = async (req, res) => {
     const decodedToken = await admin.auth().verifyIdToken(authToken);
     const { uid, phone_number } = decodedToken;
 
+    const PhoneNumber = removeSpacingOnPhoneNumber(phone_number);
+
     // Check if the user exists in the database
     let existingUser = await prisma.user.findUnique({
       where: { firebaseUserId: uid },
@@ -34,7 +36,7 @@ export const login = async (req, res) => {
       existingUser = await prisma.user.create({
         data: {
           firebaseUserId: uid,
-          phone: phone_number,
+          phone: PhoneNumber,
           // Add additional fields if needed
         },
       });

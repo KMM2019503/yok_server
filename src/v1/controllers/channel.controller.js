@@ -25,7 +25,7 @@ export const createChannel = async (req, res) => {
 export const updateChannel = async (req, res) => {
   try {
     const response = await updateChannelService(req);
-    res.status(201).json(response);
+    res.status(200).json(response);
   } catch (error) {
     logger.error("Error occurred during user update:", {
       message: error.message,
@@ -39,7 +39,7 @@ export const getAllChannels = async (req, res) => {
   try {
     console.log("getAllChannels controller called");
     const response = await getAllChannelsService(req);
-    res.status(201).json(response);
+    res.status(200).json(response);
   } catch (error) {
     logger.error("Error occurred during user update:", {
       message: error.message,
@@ -53,7 +53,7 @@ export const getChannelById = async (req, res) => {
   try {
     console.log("getChannelById controller called");
     const response = await getChannel(req);
-    res.status(201).json(response);
+    res.status(200).json(response);
   } catch (error) {
     logger.error("Error occurred during user update:", {
       message: error.message,
@@ -68,7 +68,7 @@ export const addAdminToChannel = async (req, res) => {
   try {
     const response = await addAdminService(req);
     res
-      .status(200)
+      .status(201)
       .json({ message: "Admin added successfully", data: response });
   } catch (error) {
     logger.error("Error occurred while adding admin to the channel:", {

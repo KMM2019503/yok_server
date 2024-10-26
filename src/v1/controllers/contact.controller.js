@@ -49,7 +49,7 @@ export const syncContacts = async (req, res) => {
 export const updateContact = async (req, res) => {
   try {
     const response = await updateContactService(req);
-    res.status(201).json(response);
+    res.status(200).json(response);
   } catch (error) {
     logger.error("Error occurred during update contacts:", {
       message: error.message,
@@ -62,7 +62,7 @@ export const updateContact = async (req, res) => {
 export const deleteContact = async (req, res) => {
   try {
     const response = await deleteContactService(req);
-    res.status(204).json(response);
+    res.status(200).json(response);
   } catch (error) {
     logger.error("Error occurred during delete contact:", {
       message: error.message,

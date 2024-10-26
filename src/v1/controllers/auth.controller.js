@@ -4,7 +4,7 @@ import logger from "../utils/logger.js";
 export const login = async (req, res) => {
   try {
     const response = await authServices.login(req, res);
-    res.status(201).json(response);
+    res.status(200).json(response);
   } catch (error) {
     logger.error("Error occurred during login:", error);
     res.status(500).json({ error: error.message });
