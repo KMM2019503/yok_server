@@ -8,6 +8,7 @@ const prisma = new PrismaClient();
 
 export const login = async (req, res) => {
   try {
+    logger.debug("login routed called");
     // const { error } = loginSchema.validate(req.headers, { abortEarly: false });
 
     // if (error) {

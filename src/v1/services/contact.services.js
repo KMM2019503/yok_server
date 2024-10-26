@@ -34,7 +34,8 @@ export const getAllContactsService = async (req) => {
     contacts: contacts.map((contact) => ({
       id: contact.contact.id,
       phone: contact.contact.phone,
-      displayName: contact.displayName || contact.contact.userName,
+      contactName: contact.contact.userName,
+      // displayName: contact.displayName || contact.contact.userName,
       profilePictureUrl: contact.contact.profilePictureUrl,
       createdAt: contact.createdAt,
     })),
@@ -43,7 +44,8 @@ export const getAllContactsService = async (req) => {
 
 export const createContactService = async (req) => {
   const { userid } = req.headers;
-  const { phoneNumber, displayName } = req.body;
+  // const { phoneNumber, displayName } = req.body;
+  const { phoneNumber } = req.body;
 
   // Find the user who is adding the contact
   const user = await prisma.user.findUnique({
@@ -82,7 +84,7 @@ export const createContactService = async (req) => {
     data: {
       userId: userid,
       contactId: contactUser.id,
-      displayName: displayName || null, // Optional display name
+      // displayName: displayName || null, // Optional display name
     },
   });
 
@@ -133,22 +135,25 @@ export const createListContactsService = async (req) => {
       const contactUser = existingUsersMap.get(phone);
 
       // Upsert the contact
-      return prisma.contact.upsert({
-        where: {
-          userId_contactId: {
+      return prisma.contact
+        .upsert({
+          where: {
+            userId_contactId: {
+              userId: userid,
+              contactId: contactUser.id,
+            },
+          },
+          update: {},
+          create: {
             userId: userid,
             contactId: contactUser.id,
           },
-        },
-        update: {
-          displayName: name || null, // Update displayName if the contact already exists
-        },
-        create: {
-          userId: userid,
-          contactId: contactUser.id,
-          displayName: name || null, // Create a new contact if it doesn't exist
-        },
-      });
+        })
+        .then((contact) => ({
+          ...contact,
+          phone: contactUser.phone,
+          contactName: contactUser.userName,
+        }));
     })
   );
 
@@ -162,7 +167,7 @@ export const createListContactsService = async (req) => {
 export const updateContactService = async (req) => {
   const { userid } = req.headers;
   const { contactId } = req.params;
-  const { displayName } = req.body;
+  // const { displayName } = req.body;
 
   const user = await prisma.user.findUnique({
     where: { id: userid },
@@ -190,9 +195,9 @@ export const updateContactService = async (req) => {
       id: contact.id,
       userId: userid,
     },
-    data: {
-      displayName: displayName || null,
-    },
+    // data: {
+    //   displayName: displayName || null,
+    // },
   });
 
   return {
