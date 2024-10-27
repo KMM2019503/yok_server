@@ -7,11 +7,7 @@ import {
 import { checkToken } from "../middlewares/checkAuth";
 const router = Router();
 
-router.get(
-  "/findUserByPhoneNumber/:phoneNumber",
-  checkToken,
-  getUserByPhoneNumber
-);
+router.get("/findUserByPhoneNumber/:phoneNumber", getUserByPhoneNumber);
 
 router.post("/update", checkToken, updateUser);
 

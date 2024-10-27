@@ -61,6 +61,7 @@ export const fetchUserByPhoneNumberService = async (req) => {
 
   // Remove any spaces from the phone number
   phoneNumber = removeSpacingOnPhoneNumber(phoneNumber);
+  console.log("🚀 ~ fetchUserByPhoneNumberService ~ phoneNumber:", phoneNumber);
 
   // Validate phone number format: must start with '+' followed by digits
   const phoneRegex = /^\+\d+$/;
