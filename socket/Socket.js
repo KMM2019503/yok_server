@@ -26,9 +26,9 @@ const io = new Server(server, {
 logger.info("WebSocket server started");
 
 // Apply the checkAuth middleware to each incoming connection
-io.use((socket, next) => {
-  checkToken(socket.handshake, {}, next);
-});
+// io.use((socket, next) => {
+//   checkToken(socket.handshake, {}, next);
+// });
 
 // Handle incoming socket connections
 io.on("connection", (socket) => {
