@@ -12,7 +12,7 @@ export const createChannelService = async (req) => {
   try {
     // Destructure the request to get userId and body
     const { body } = req;
-    const { userid } = req.header;
+    const { userid } = req.headers;
 
     // Validate the incoming data using Joi schema
     const { error } = createChannelSchema.validate(body, { abortEarly: false });
@@ -82,7 +82,7 @@ export const createChannelService = async (req) => {
 
 export const getAllChannelsService = async (req) => {
   try {
-    const { userid } = req.header;
+    const { userid } = req.headers;
     const { page = 1, size = 15, isSuperAdmin, isAdmin } = req.params; // Default values for pagination
 
     // Calculate offset for pagination

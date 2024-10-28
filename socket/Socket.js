@@ -26,9 +26,9 @@ const io = new Server(server, {
 logger.info("WebSocket server started");
 
 // Apply the checkAuth middleware to each incoming connection
-// io.use((socket, next) => {
-//   checkToken(socket.handshake, {}, next);
-// });
+io.use((socket, next) => {
+  checkToken(socket.handshake, {}, next);
+});
 
 // Handle incoming socket connections
 io.on("connection", (socket) => {
@@ -52,6 +52,24 @@ io.on("connection", (socket) => {
   } else {
     logger.warn("User ID is undefined or invalid.");
   }
+
+  // Listen for "createGroupRoom" event emitted after group creation
+  socket.on("createGroupRoom", ({ groupId, memberIds }) => {
+    const roomName = `group_${groupId}`; // Room name for the group
+
+    // Add all members to the group room
+    memberIds.forEach((memberId) => {
+      const memberSocketId = getReceiverSocketId(memberId);
+      if (memberSocketId) {
+        io.sockets.sockets.get(memberSocketId)?.join(roomName);
+      }
+    });
+
+    // Notify all members in the room about the new group
+    io.to(roomName).emit("groupCreated", { groupId, message: "A new group has been created." });
+
+    logger.info(`Room ${roomName} created and members notified.`);
+  });
 
   // Listen for the "markMessageAsRead" event
   socket.on("markMessageAsRead", async (messageId) => {

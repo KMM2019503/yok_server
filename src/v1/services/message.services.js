@@ -2,7 +2,7 @@
 import { PrismaClient } from "@prisma/client";
 import logger from "../utils/logger";
 import { getReceiverSocketId, io } from "../../../socket/Socket";
-import { retryWithBackoff } from "../utils/helper";
+// import { retryWithBackoff } from "../utils/helper";
 
 const prisma = new PrismaClient();
 

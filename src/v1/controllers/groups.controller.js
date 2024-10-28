@@ -1,8 +1,9 @@
+import { createGroupService } from "../services/group.services.js";
 import logger from "../utils/logger.js";
 
 export const createGroup = async (req, res) => {
   try {
-    const response = await creteGroupService(req);
+    const response = await createGroupService(req);
     res.status(201).json(response);
   } catch (error) {
     logger.error("Error occurred during create group:", {
