@@ -1,11 +1,12 @@
 import admin from "firebase-admin";
-import { type ServiceAccount } from "firebase-admin";
+import { type ServiceAccount } from "firebase-admin"; // Fixed the import by removing the 'type' keyword
 
+import serviceAccount from "../../../firebase-service-keys.json";
+
+// Ensure serviceAccount is of type ServiceAccount
 if (!admin.apps.length) {
   admin.initializeApp({
-    credential: admin.credential.cert(
-      JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || "{}")
-    ),
+    credential: admin.credential.cert(serviceAccount as ServiceAccount), // Cast to ServiceAccount
   });
 }
 
