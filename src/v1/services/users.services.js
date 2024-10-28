@@ -1,6 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import logger from "../utils/logger";
 import { removeSpacingOnPhoneNumber } from "../utils/helper";
+import { ErrorCodes } from "../utils/error/error_codes";
+import { AppError } from "../utils/error/app_error";
 const prisma = new PrismaClient();
 
 export const updateUserService = async (req) => {
@@ -79,7 +81,8 @@ export const fetchUserByPhoneNumberService = async (req) => {
 
   // If no user is found, return an appropriate response
   if (!user) {
-    throw new Error("User not found");
+    // Throw a specific error with a custom message, status code, and error code
+    throw new AppError("User not found", 404, ErrorCodes.UserNotFound);
   }
 
   // Return the found user

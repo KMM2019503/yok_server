@@ -40,6 +40,13 @@ export const getUserByPhoneNumber = async (req, res) => {
       message: error.message,
       stack: error.stack,
     });
-    res.status(500).json({ error: error.message, success: false });
+    res.status(500).json({
+      error: {
+        message: error.message,
+        statusCode: error.statusCode,
+        errorCode: error.errorCode,
+      },
+      success: false,
+    });
   }
 };
