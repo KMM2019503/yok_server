@@ -13,7 +13,7 @@ Ensure you have the following installed:
 ## Project Structure
 
 - Place your Firebase service account key in the project folder as `firebase-service-keys.json`.
-- Create a script named `source_env.sh` to manage your environment variables.
+- in project folder, there should be a script called `source_env.sh` to manage your environment variables.
 
 ## Setup Instructions
 
