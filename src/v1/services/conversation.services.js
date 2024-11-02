@@ -4,7 +4,11 @@ const prisma = new PrismaClient();
 
 export const getAllConversationsService = async (req) => {
   try {
-    const { userid } = req.header;
+    const { userid } = req.headers;
+   
+    if (!userid) {
+      throw new Error("User Id not found")
+    }
     const { page = 1, size = 15 } = req.query; // Pagination parameters
 
     // Calculate the offset for pagination
@@ -27,8 +31,7 @@ export const getAllConversationsService = async (req) => {
               select: {
                 id: true,
                 userName: true,
-                profilePictureUrl: true,
-                status: true,
+                profilePictureUrl: true
               },
             },
           },
@@ -74,7 +77,7 @@ export const getAllConversationsService = async (req) => {
 
 export const getConversationService = async (req) => {
   try {
-    const { userid } = req.header;
+    const { userid } = req.headers;
     const { conversationId } = req.params;
     const { page = 1, size = 15 } = req.query; // Pagination parameters
 
@@ -93,18 +96,6 @@ export const getConversationService = async (req) => {
         },
       },
       include: {
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                userName: true,
-                profilePictureUrl: true,
-                status: true,
-              },
-            },
-          },
-        },
         messages: {
           skip: skip,
           take: take,
