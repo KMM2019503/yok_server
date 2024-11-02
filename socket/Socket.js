@@ -38,16 +38,6 @@ io.on("connection", (socket) => {
   if (userId && userId !== "undefined") {
     onlineUsers[userId] = socket.id; // Store the socket ID associated with the user ID
     logger.info(`User connected: ${socket.id}, User ID: ${userId}`);
-
-    // Update user status to ONLINE and set last active time
-    prisma.user.update({
-      where: { id: userId },
-      data: {
-        status: "ONLINE",
-        lastActiveAt: new Date(),
-      },
-    });
-
     io.emit("pullOnlineUsers", Object.keys(onlineUsers)); // Notify all clients about the updated list of online users
   } else {
     logger.warn("User ID is undefined or invalid.");
@@ -57,16 +47,32 @@ io.on("connection", (socket) => {
   socket.on("createGroupRoom", ({ groupId, memberIds }) => {
     const roomName = `group_${groupId}`; // Room name for the group
 
+    console.log("🚀 ~ socket.on ~ roomName:", roomName);
+
     // Add all members to the group room
     memberIds.forEach((memberId) => {
       const memberSocketId = getReceiverSocketId(memberId);
+      console.log("🚀 ~ memberIds.forEach ~ memberSocketId:", memberSocketId);
+
       if (memberSocketId) {
         io.sockets.sockets.get(memberSocketId)?.join(roomName);
+        io.to(memberSocketId).emit("joinGroupRoomNoti", {
+          roomName,
+          groupId,
+        });
       }
     });
 
+    socket.emit("joinGroupRoomNoti", {
+      roomName,
+      groupId,
+    });
+
     // Notify all members in the room about the new group
-    io.to(roomName).emit("groupCreated", { groupId, message: "A new group has been created." });
+    io.to(roomName).emit("groupCreated", {
+      groupId,
+      message: "A new group has been created.",
+    });
 
     logger.info(`Room ${roomName} created and members notified.`);
   });
@@ -94,25 +100,27 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("testing", (data) => {
-    console.log("🚀 ~ socket.on ~ testing ~data:", data);
-  });
-
   // Handle user disconnection
-  socket.on("disconnect", () => {
-    logger.info(`User disconnected: ${socket.id}`);
+  socket.on("disconnect", async () => {
+    logger.info(`User disconnected process started at: ${socket.id}`);
+
     if (userId && onlineUsers[userId]) {
       delete onlineUsers[userId]; // Remove the user from the online users list
 
-      // Update user status to OFFLINE
-      prisma.user.update({
-        where: { id: userId },
-        data: {
-          status: "OFFLINE",
-        },
-      });
+      try {
+        // Update user status to OFFLINE and lastActiveAt to the current timestamp
+        await prisma.user.update({
+          where: { id: userId },
+          data: {
+            lastActiveAt: new Date(),
+          },
+        });
+        logger.info(`User disconnected process finished at: ${socket.id}`);
 
-      io.emit("pullOnlineUsers", Object.keys(onlineUsers)); // Notify all clients about the updated list of online users
+        io.emit("pullOnlineUsers", Object.keys(onlineUsers)); // Notify all clients about the updated list of online users
+      } catch (error) {
+        logger.error("Error updating user status on disconnect:", error);
+      }
     }
   });
 });

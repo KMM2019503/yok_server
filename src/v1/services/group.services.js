@@ -36,7 +36,7 @@ export const createGroupService = async (req) => {
         name,
         description,
         isPublic: isPublic || false, // Defaults to false if not provided
-        profilePictureUrl,
+        profilePictureUrl: profilePictureUrl || "example.profile.picture",
         createdById: userid,
         members: {
           create: membersData, // Add multiple members including the creator
@@ -48,12 +48,11 @@ export const createGroupService = async (req) => {
     });
     logger.info(`Group Create Query Finished At ${new Date().toISOString()}`);
 
-
     // Emit a "createGroupRoom" event to Socket.IO
     io.emit("createGroupRoom", {
-        groupId: newGroup.id,
-        memberIds,
-      });
+      groupId: newGroup.id,
+      memberIds,
+    });
 
     // Return the created group details
     return {
@@ -67,5 +66,78 @@ export const createGroupService = async (req) => {
       stack: error.stack,
     });
     throw new Error("Failed to create group");
+  }
+};
+
+export const joinGroupService = async (req) => {
+  const { userid } = req.headers; // Current user ID
+  const { groupId } = req.params; // Group ID to join
+
+  if (!userid) {
+    throw new Error("User ID is required");
+  }
+
+  try {
+    // Check if the group exists and is public
+    // const group = await prisma.group.findUnique({
+    //   where: { id: groupId },
+    //   select: { isPublic: true },
+    // });
+
+    // if (!group) {
+    //   return {
+    //     success: false,
+    //     message: "Group not found",
+    //   };
+    // }
+
+    // if (!group.isPublic) {
+    //   return {
+    //     success: false,
+    //     message: "Group is not public",
+    //   };
+    // }
+
+    // Upsert to add user as a group member if not already added
+    const result = await prisma.groupMember.upsert({
+      where: {
+        groupId_userId: {
+          // Unique compound key for group membership
+          groupId: groupId,
+          userId: userid,
+        },
+      },
+      update: {}, // Leave empty because we don't want to update if it exists
+      create: {
+        userId: userid,
+        groupId: groupId,
+        joinedAt: new Date(),
+      },
+    });
+
+    if (!result) {
+      return {
+        success: false,
+        message: "User is already a member of this group",
+      };
+    }
+
+    // Emit a "joinGroupRoom" event to Socket.IO
+    // io.emit("joinGroupRoom", {
+    //   groupId,
+    //   userId: userid,
+    // });
+
+    // Return a success response
+    return {
+      success: true,
+      message: "User has successfully joined the group",
+    };
+  } catch (error) {
+    logger.error("Error joining group:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    throw new Error("Failed to join group");
   }
 };

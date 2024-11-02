@@ -83,7 +83,7 @@ export const getConversationService = async (req) => {
     const take = Number(size);
 
     // Fetch the conversation where the user is a member
-    const conversation = await prisma.conversation.findFirst({
+    const conversation = await prisma.conversation.findUnique({
       where: {
         id: conversationId,
         members: {
