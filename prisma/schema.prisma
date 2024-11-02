@@ -4,25 +4,28 @@ datasource db {
 }
 
 generator client {
-  provider = "prisma-client-js"
-}
-
-enum Status {
-  ONLINE
-  OFFLINE
-  AWAY
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-arm64-openssl-1.1.x"]
 }
 
 model User {
   id                  String               @id @default(auto()) @map("_id") @db.ObjectId
+  firebaseUserId      String               @unique @map("firebase_user_id")
   phone               String               @unique
-  userName            String               @map("user_name")
+  userName            String?              @map("user_name")
   profilePictureUrl   String?              @map("profile_picture_url")
-  status              Status
+  lastActiveAt        DateTime?            @map("last_active_at")
   sentMessages        Message[]            @relation("SentMessages")
   conversationMembers ConversationMember[]
   adminChannels       Channel[]            @relation("AdminChannels")
+  superAdminChannels  Channel[]            @relation("SuperAdminChannels")
+  CreatedChannels     Channel[]            @relation("CreatedChannels")
   channelMembers      ChannelMember[]
+  groupMembers        GroupMember[]
+  CreatedGroups       Group[]              @relation("CreatedGroups")
+  contacts            Contact[]            @relation("UserContacts")
+  addedContacts       Contact[]            @relation("AddedContacts")
+  pinnedItems         PinnedItem[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
@@ -33,6 +36,8 @@ model Conversation {
   id           String               @id @default(auto()) @map("_id") @db.ObjectId
   members      ConversationMember[]
   messages     Message[]
+  lastMessage  LastMessage?
+  pinnedItems  PinnedItem[]
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt
   lastActivity DateTime             @default(now())
@@ -52,17 +57,57 @@ model ConversationMember {
   @@map("conversation_members")
 }
 
+model Group {
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  name              String
+  description       String?
+  isPublic          Boolean       @default(false) // Whether the group is open to anyone
+  profilePictureUrl String?       @map("profile_picture_url")
+  pinnedItems       PinnedItem[]
+  messages          Message[]
+  lastMessage       LastMessage?
+  createdBy         User          @relation("CreatedGroups", fields: [createdById], references: [id])
+  createdById       String        @db.ObjectId
+  members           GroupMember[]
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  lastActivity      DateTime      @default(now())
+
+  @@map("groups")
+}
+
+model GroupMember {
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+  user     User     @relation(fields: [userId], references: [id])
+  userId   String   @db.ObjectId
+  group    Group    @relation(fields: [groupId], references: [id])
+  groupId  String   @db.ObjectId
+  joinedAt DateTime @default(now())
+
+  @@unique([userId, groupId])
+  @@map("group_members")
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+}
+
 model Message {
   id             String        @id @default(auto()) @map("_id") @db.ObjectId
   sender         User          @relation("SentMessages", fields: [senderId], references: [id])
   senderId       String        @db.ObjectId
   content        String
-  photoUrl       String?
-  fileUrl        String?
+  photoUrl       String[]
+  fileUrls       String[]
+  status         MessageStatus @default(SENT)
   conversation   Conversation? @relation(fields: [conversationId], references: [id])
   conversationId String?       @db.ObjectId
   channel        Channel?      @relation(fields: [channelId], references: [id])
   channelId      String?       @db.ObjectId
+  group          Group?        @relation(fields: [groupId], references: [id])
+  groupId        String?       @db.ObjectId
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
@@ -70,17 +115,24 @@ model Message {
 }
 
 model Channel {
-  id           String          @id @default(auto()) @map("_id") @db.ObjectId
-  name         String
-  description  String?
-  isPublic     Boolean         @default(true)
-  messages     Message[]
-  admin        User            @relation("AdminChannels", fields: [adminId], references: [id])
-  adminId      String          @db.ObjectId
-  members      ChannelMember[]
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  lastActivity DateTime        @default(now())
+  id                String          @id @default(auto()) @map("_id") @db.ObjectId
+  name              String
+  description       String?
+  isPublic          Boolean         @default(true)
+  profilePictureUrl String?         @map("profile_picture_url")
+  pinnedItems       PinnedItem[]
+  messages          Message[]
+  lastMessage       LastMessage?
+  createdBy         User            @relation("CreatedChannels", fields: [createdById], references: [id])
+  createdById       String          @db.ObjectId
+  superAdmin        User            @relation("SuperAdminChannels", fields: [superAdminId], references: [id])
+  superAdminId      String          @db.ObjectId
+  admin             User            @relation("AdminChannels", fields: [adminIds], references: [id])
+  adminIds          String[]        @db.ObjectId
+  members           ChannelMember[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  lastActivity      DateTime        @default(now())
 
   @@map("channels")
 }
@@ -95,4 +147,43 @@ model ChannelMember {
 
   @@unique([userId, channelId])
   @@map("channel_members")
+}
+
+model Contact {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  // displayName String?
+  user   User   @relation("UserContacts", fields: [userId], references: [id])
+  userId String @db.ObjectId
+
+  contact   User     @relation("AddedContacts", fields: [contactId], references: [id])
+  contactId String   @db.ObjectId
+  createdAt DateTime @default(now())
+
+  @@unique([userId, contactId])
+  @@map("contacts")
+}
+
+model PinnedItem {
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  user           User          @relation(fields: [userId], references: [id])
+  userId         String        @db.ObjectId
+  conversation   Conversation? @relation(fields: [conversationId], references: [id])
+  conversationId String?       @db.ObjectId
+  group          Group?        @relation(fields: [groupId], references: [id])
+  groupId        String?       @db.ObjectId
+  channel        Channel?      @relation(fields: [channelId], references: [id])
+  channelId      String?       @db.ObjectId
+  pinnedAt       DateTime      @default(now())
+
+  @@unique([userId, conversationId, groupId, channelId])
+  @@index([userId, conversationId], name: "user_conversation_unique_idx")
+  @@index([userId, groupId], name: "user_group_unique_idx")
+  @@index([userId, channelId], name: "user_channel_unique_idx")
+  @@map("pinned_items")
+}
+
+type LastMessage {
+  content   String
+  senderId  String   @db.ObjectId
+  createdAt DateTime
 }

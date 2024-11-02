@@ -7,30 +7,46 @@ import express, {
 import logger from "./v1/utils/logger"; // Import the logger
 import routes from "./v1/routes"; // Import your routes
 import applyMiddlewares from "./v1/middlewares";
+import cookieParser from "cookie-parser";
+import { app, server } from "../socket/Socket.js";
 
 dotenv.config(); // Load environment variables
 
+// Validate environment variables
+const port = parseInt(process.env.PORT || "3000", 10);
+if (isNaN(port)) {
+  logger.error("Invalid PORT environment variable");
+  process.exit(1); // Exit if port is invalid
+}
+
 const startServer = () => {
-  const app = express();
+  app.use(express.json());
+  app.use(cookieParser());
 
-  // apply middlewares
+  // Apply middlewares
   applyMiddlewares(app);
-
-  // Ensure port is a number
-  const port: number = parseInt(process.env.PORT || "3000", 10);
 
   // Use routes
   app.use("/v1/", routes);
 
-  // Global error handler (optional, for better error handling)
+  // Global error handler
   app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-    logger.error(err.stack); // Use Winston for error logging
-    res.status(500).json({ message: '"Something went wrong!"' });
+    logger.error(err.stack || err.message); // Use Winston for error logging
+    res.status(500).json({ message: "Something went wrong!" });
   });
 
   // Start the server
-  app.listen(port, () => {
-    logger.info(`Server is running on port ${port}`); // Use Winston for logging
+  server.listen(port, () => {
+    logger.info(`Server is running on port ${port}`);
+  });
+
+  // Handle graceful shutdown
+  process.on("SIGINT", () => {
+    logger.info("Received SIGINT. Shutting down gracefully...");
+    server.close(() => {
+      logger.info("Server shut down.");
+      process.exit(0);
+    });
   });
 };
 

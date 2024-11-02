@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Status } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -9,9 +9,7 @@ async function main() {
       phone: "1234567890",
       userName: "john_doe",
       profilePictureUrl: "http://example.com/john.jpg",
-      status: "ONLINE",
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      status: Status.ONLINE,
     },
   });
 
@@ -20,21 +18,19 @@ async function main() {
       phone: "0987654321",
       userName: "jane_doe",
       profilePictureUrl: "http://example.com/jane.jpg",
-      status: "OFFLINE",
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      status: Status.OFFLINE,
     },
   });
 
-  // Seed Channels
+  // Seed Channel
   const channel1 = await prisma.channel.create({
     data: {
       name: "General",
       description: "General discussion",
       isPublic: true,
-      adminId: user1.id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdById: user1.id,
+      superAdminId: user1.id,
+      adminIds: [user1.id],
       lastActivity: new Date(),
     },
   });
@@ -56,14 +52,12 @@ async function main() {
     },
   });
 
-  // Seed Messages in Channel
+  // Seed Messages in the Channel
   await prisma.message.create({
     data: {
       senderId: user1.id,
       content: "Hello, world!",
       channelId: channel1.id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
     },
   });
 
@@ -72,16 +66,12 @@ async function main() {
       senderId: user2.id,
       content: "Hi there!",
       channelId: channel1.id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
     },
   });
 
-  // Seed Conversation
+  // Seed a Conversation
   const conversation1 = await prisma.conversation.create({
     data: {
-      createdAt: new Date(),
-      updatedAt: new Date(),
       lastActivity: new Date(),
     },
   });
@@ -103,14 +93,12 @@ async function main() {
     },
   });
 
-  // Seed Messages in Conversation
+  // Seed Messages in the Conversation
   await prisma.message.create({
     data: {
       senderId: user1.id,
       content: "Hello, Jane!",
       conversationId: conversation1.id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
     },
   });
 
@@ -119,8 +107,21 @@ async function main() {
       senderId: user2.id,
       content: "Hi, John!",
       conversationId: conversation1.id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+    },
+  });
+
+  // Seed Contacts
+  await prisma.contact.create({
+    data: {
+      userId: user1.id,
+      contactId: user2.id,
+    },
+  });
+
+  await prisma.contact.create({
+    data: {
+      userId: user2.id,
+      contactId: user1.id,
     },
   });
 }
