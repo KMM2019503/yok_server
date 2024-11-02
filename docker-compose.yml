@@ -1,0 +1,17 @@
+# docker-compose.yml
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app # Mount the current directory to the /app directory in the container
+    ports:
+      - "3000:3000" # Map port 3000 on the host to port 3000 in the container
+    environment:
+      - NODE_ENV=development # Set environment variable
+      - MONGODB_URI=${MONGODB_URI}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY} # Use environment variable
+
