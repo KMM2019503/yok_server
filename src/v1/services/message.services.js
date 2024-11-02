@@ -6,7 +6,7 @@ import { getReceiverSocketId, io } from "../../../socket/Socket";
 const prisma = new PrismaClient();
 
 export const sendDmMessageService = async (req) => {
-  const { userid } = req.header;
+  const { user_id: userid } = req.headers;
   const { body } = req;
   const { content, conversationId, photoUrl, fileUrls, receiverId } = body;
 
