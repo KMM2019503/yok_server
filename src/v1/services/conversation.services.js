@@ -31,6 +31,7 @@ export const getAllConversationsService = async (req) => {
               select: {
                 id: true,
                 userName: true,
+                phone: true,
                 profilePictureUrl: true
               },
             },
@@ -113,6 +114,7 @@ export const getConversationService = async (req) => {
               select: {
                 id: true,
                 userName: true,
+                phone: true,
                 profilePictureUrl: true,
               },
             },
