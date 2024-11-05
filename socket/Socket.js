@@ -43,62 +43,49 @@ io.on("connection", (socket) => {
     logger.warn("User ID is undefined or invalid.");
   }
 
-  // Listen for "createGroupRoom" event emitted after group creation
-  socket.on("createGroupRoom", ({ groupId, memberIds }) => {
-    const roomName = `group_${groupId}`; // Room name for the group
+    // Handle "reconnectUser" event
+    socket.on("reconnectUser", async (userId) => {
+      if (userId) {
+        try {
+          // Fetch user's groups from the database
+          const userGroups = await prisma.group.findMany({
+            where: { members: { some: { userId } } },
+            select: { id: true },
+          });
 
-    console.log("🚀 ~ socket.on ~ roomName:", roomName);
+          if (groupIds > 0) {
+            userGroups.forEach((group) => socket.join(group.id));
+          }
+        } catch (error) {
+          logger.error("Error fetching user groups on reconnect:", error);
+        }
+      }
+    });
 
-    // Add all members to the group room
-    memberIds.forEach((memberId) => {
-      const memberSocketId = getReceiverSocketId(memberId);
-      console.log("🚀 ~ memberIds.forEach ~ memberSocketId:", memberSocketId);
-
-      if (memberSocketId) {
-        io.sockets.sockets.get(memberSocketId)?.join(roomName);
-        io.to(memberSocketId).emit("joinGroupRoomNoti", {
-          roomName,
-          groupId,
+  
+    // Listen for the "markMessageAsRead" event
+    socket.on("markMessageAsRead", async (messageId) => {
+      try {
+        // Update the message status to 'READ'
+        const updatedMessage = await prisma.message.update({
+          where: { id: messageId },
+          data: { status: "READ" },
         });
+
+        // Notify the receiver if they are online
+        const senderScoketId = getReceiverSocketId(updatedMessage.senderId);
+
+        // check if the sender is online
+        if (senderScoketId) {
+          io.to(senderScoketId).emit("messageStatusUpdated", updatedMessage);
+        }
+
+        console.log("sender is offline");
+      } catch (error) {
+        logger.error("Error updating message status via WebSocket:", error);
       }
     });
-
-    socket.emit("joinGroupRoomNoti", {
-      roomName,
-      groupId,
-    });
-
-    // Notify all members in the room about the new group
-    io.to(roomName).emit("groupCreated", {
-      groupId,
-      message: "A new group has been created.",
-    });
-
-    logger.info(`Room ${roomName} created and members notified.`);
-  });
-
-  // Listen for the "markMessageAsRead" event
-  socket.on("markMessageAsRead", async (messageId) => {
-    try {
-      // Update the message status to 'READ'
-      const updatedMessage = await prisma.message.update({
-        where: { id: messageId },
-        data: { status: "READ" },
-      });
-
-      // Notify the receiver if they are online
-      const senderScoketId = getReceiverSocketId(updatedMessage.senderId);
-
-      // check if the sender is online
-      if (senderScoketId) {
-        io.to(senderScoketId).emit("messageStatusUpdated", updatedMessage);
-      }
-
-      console.log("sender is offline");
-    } catch (error) {
-      logger.error("Error updating message status via WebSocket:", error);
-    }
-  });
+ 
 
   // Handle user disconnection
   socket.on("disconnect", async () => {
@@ -127,3 +114,38 @@ io.on("connection", (socket) => {
 
 // Export app and server for use in other modules
 export { app, server, io, getReceiverSocketId };
+
+
+// Listen for "createGroupRoom" event emitted after group creation
+  // socket.on("createGroupRoom", ({ groupId, memberIds }) => {
+  //   const roomName = `group_${groupId}`; // Room name for the group
+
+  //   console.log("🚀 ~ socket.on ~ roomName:", roomName);
+
+  //   // Add all members to the group room
+  //   memberIds.forEach((memberId) => {
+  //     const memberSocketId = getReceiverSocketId(memberId);
+  //     console.log("🚀 ~ memberIds.forEach ~ memberSocketId:", memberSocketId);
+
+  //     if (memberSocketId) {
+  //       io.sockets.sockets.get(memberSocketId)?.join(roomName);
+  //       io.to(memberSocketId).emit("joinGroupRoomNoti", {
+  //         roomName,
+  //         groupId,
+  //       });
+  //     }
+  //   });
+
+  //   socket.emit("joinGroupRoomNoti", {
+  //     roomName,
+  //     groupId,
+  //   });
+
+  //   // Notify all members in the room about the new group
+  //   io.to(roomName).emit("groupCreated", {
+  //     groupId,
+  //     message: "A new group has been created.",
+  //   });
+
+  //   logger.info(`Room ${roomName} created and members notified.`);
+  // });
