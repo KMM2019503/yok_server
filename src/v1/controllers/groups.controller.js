@@ -2,6 +2,7 @@ import {
   createGroupService,
   getAllGroupsService,
   joinGroupService,
+  leaveGroupService,
 } from "../services/group.services.js";
 import logger from "../utils/logger.js";
 
@@ -37,6 +38,19 @@ export const joinGroup = async (req, res) => {
     res.status(201).json(response);
   } catch (error) {
     logger.error("Error occurred during join group:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: error.message, success: false });
+  }
+};
+
+export const leaveGroup = async (req, res) => {
+  try {
+    const response = await leaveGroupService(req);
+    res.status(201).json(response);
+  } catch (error) {
+    logger.error("Error occurred during leave group:", {
       message: error.message,
       stack: error.stack,
     });

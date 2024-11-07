@@ -203,6 +203,60 @@ export const joinGroupService = async (req) => {
   }
 };
 
+export const leaveGroupService = async (req) => {
+  const { userid } = req.headers;
+  const { groupId } = req.params;
+
+  // Validate input
+  if (!userid) {
+    throw new Error("User  ID is required");
+  }
+  if (!groupId) {
+    throw new Error("Group ID is required");
+  }
+
+  try {
+    // Attempt to remove the user from the group
+    const deletedMember = await prisma.groupMember.deleteMany({
+      where: {
+        userId: userid,
+        groupId: groupId,
+      },
+    });
+
+    // Check if the user was actually a member
+    if (deletedMember.count === 0) {
+      throw new Error("User  is not a member of this group");
+    }
+
+    // Emit an event to notify group members about the user leaving
+    const memberSocketId = getReceiverSocketId(userid);
+    if (memberSocketId) {
+      // Emit to the user that they have left the group
+      io.to(memberSocketId).emit("groupLeft", { groupId, userId: userid });
+      // Remove the user from the group room
+      io.sockets.sockets.get(memberSocketId)?.leave(groupId);
+    }
+
+    // Notify all users in the group room about the member leaving
+    io.to(groupId).emit("memberLeft", {
+      groupId,
+      userId: userid,
+    });
+
+    return {
+      success: true,
+      message: "User  has successfully left the group",
+    };
+  } catch (error) {
+    logger.error("Error leaving group:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    throw new Error(error.message);
+  }
+};
+
 // export const createGroupService = async (req) => {
 //   logger.info(`Group Create Process Started At ${new Date().toISOString()}`);
 //   const { userid } = req.headers; // Current user ID
