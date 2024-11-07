@@ -84,7 +84,7 @@ model GroupMember {
   groupId  String   @db.ObjectId
   joinedAt DateTime @default(now())
 
-  @@unique([userId, groupId])
+  @@unique([userId, groupId]) // Unique constraint on userId and groupId
   @@map("group_members")
 }
 

@@ -26,9 +26,9 @@ const io = new Server(server, {
 logger.info("WebSocket server started");
 
 // Apply the checkAuth middleware to each incoming connection
-io.use((socket, next) => {
-  checkToken(socket.handshake, {}, next);
-});
+// io.use((socket, next) => {
+//   checkToken(socket.handshake, {}, next);
+// });
 
 // Handle incoming socket connections
 io.on("connection", (socket) => {
@@ -43,49 +43,50 @@ io.on("connection", (socket) => {
     logger.warn("User ID is undefined or invalid.");
   }
 
-    // Handle "reconnectUser" event
-    socket.on("reconnectUser", async (userId) => {
-      if (userId) {
-        try {
-          // Fetch user's groups from the database
-          const userGroups = await prisma.group.findMany({
-            where: { members: { some: { userId } } },
-            select: { id: true },
-          });
-
-          if (groupIds > 0) {
-            userGroups.forEach((group) => socket.join(group.id));
-          }
-        } catch (error) {
-          logger.error("Error fetching user groups on reconnect:", error);
-        }
-      }
-    });
-
-  
-    // Listen for the "markMessageAsRead" event
-    socket.on("markMessageAsRead", async (messageId) => {
+  // Handle "reconnectUser" event
+  socket.on("reconnectUser", async (data) => {
+    console.log("🚀 ~ socket.on ~ data:", data);
+    const { userId } = data;
+    if (userId) {
       try {
-        // Update the message status to 'READ'
-        const updatedMessage = await prisma.message.update({
-          where: { id: messageId },
-          data: { status: "READ" },
+        // Fetch user's groups from the database
+        const userGroups = await prisma.group.findMany({
+          where: { members: { some: { userId } } },
+          select: { id: true },
         });
-
-        // Notify the receiver if they are online
-        const senderScoketId = getReceiverSocketId(updatedMessage.senderId);
-
-        // check if the sender is online
-        if (senderScoketId) {
-          io.to(senderScoketId).emit("messageStatusUpdated", updatedMessage);
+        console.log("🚀 ~ socket.on ~ userGroups:", userGroups);
+        if (userGroups.length > 0) {
+          userGroups.forEach((group) => socket.join(group.id));
         }
-
-        console.log("sender is offline");
+        console.log("Finished");
       } catch (error) {
-        logger.error("Error updating message status via WebSocket:", error);
+        logger.error("Error fetching user groups on reconnect:", error);
       }
-    });
- 
+    }
+  });
+
+  // Listen for the "markMessageAsRead" event
+  socket.on("markMessageAsRead", async (messageId) => {
+    try {
+      // Update the message status to 'READ'
+      const updatedMessage = await prisma.message.update({
+        where: { id: messageId },
+        data: { status: "READ" },
+      });
+
+      // Notify the receiver if they are online
+      const senderScoketId = getReceiverSocketId(updatedMessage.senderId);
+
+      // check if the sender is online
+      if (senderScoketId) {
+        io.to(senderScoketId).emit("messageStatusUpdated", updatedMessage);
+      }
+
+      console.log("sender is offline");
+    } catch (error) {
+      logger.error("Error updating message status via WebSocket:", error);
+    }
+  });
 
   // Handle user disconnection
   socket.on("disconnect", async () => {
@@ -115,37 +116,36 @@ io.on("connection", (socket) => {
 // Export app and server for use in other modules
 export { app, server, io, getReceiverSocketId };
 
-
 // Listen for "createGroupRoom" event emitted after group creation
-  // socket.on("createGroupRoom", ({ groupId, memberIds }) => {
-  //   const roomName = `group_${groupId}`; // Room name for the group
+// socket.on("createGroupRoom", ({ groupId, memberIds }) => {
+//   const roomName = `group_${groupId}`; // Room name for the group
 
-  //   console.log("🚀 ~ socket.on ~ roomName:", roomName);
+//   console.log("🚀 ~ socket.on ~ roomName:", roomName);
 
-  //   // Add all members to the group room
-  //   memberIds.forEach((memberId) => {
-  //     const memberSocketId = getReceiverSocketId(memberId);
-  //     console.log("🚀 ~ memberIds.forEach ~ memberSocketId:", memberSocketId);
+//   // Add all members to the group room
+//   memberIds.forEach((memberId) => {
+//     const memberSocketId = getReceiverSocketId(memberId);
+//     console.log("🚀 ~ memberIds.forEach ~ memberSocketId:", memberSocketId);
 
-  //     if (memberSocketId) {
-  //       io.sockets.sockets.get(memberSocketId)?.join(roomName);
-  //       io.to(memberSocketId).emit("joinGroupRoomNoti", {
-  //         roomName,
-  //         groupId,
-  //       });
-  //     }
-  //   });
+//     if (memberSocketId) {
+//       io.sockets.sockets.get(memberSocketId)?.join(roomName);
+//       io.to(memberSocketId).emit("joinGroupRoomNoti", {
+//         roomName,
+//         groupId,
+//       });
+//     }
+//   });
 
-  //   socket.emit("joinGroupRoomNoti", {
-  //     roomName,
-  //     groupId,
-  //   });
+//   socket.emit("joinGroupRoomNoti", {
+//     roomName,
+//     groupId,
+//   });
 
-  //   // Notify all members in the room about the new group
-  //   io.to(roomName).emit("groupCreated", {
-  //     groupId,
-  //     message: "A new group has been created.",
-  //   });
+//   // Notify all members in the room about the new group
+//   io.to(roomName).emit("groupCreated", {
+//     groupId,
+//     message: "A new group has been created.",
+//   });
 
-  //   logger.info(`Room ${roomName} created and members notified.`);
-  // });
+//   logger.info(`Room ${roomName} created and members notified.`);
+// });

@@ -16,7 +16,9 @@ const router = Router();
 // router.post("/", checkToken, sendMessage);
 
 // Send DM messages
-router.post("/direct-message", checkToken, sendDmMessage);
+// router.post("/direct-message", checkToken, sendDmMessage);
+router.post("/direct-message", sendDmMessage);
+
 // Route to mark a message as read
 router.put("/messages/:id/read", checkToken, updateMessageStatus);
 

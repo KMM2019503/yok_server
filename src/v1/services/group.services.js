@@ -4,6 +4,81 @@ import { getReceiverSocketId, io } from "../../../socket/Socket";
 
 const prisma = new PrismaClient();
 
+export const getAllGroupsService = async (req) => {
+  const { userid } = req.headers; // Current user ID
+  const { page = 1, limit = 10 } = req.query; // Default to page 1 and limit to 10
+
+  if (!userid) {
+    throw new Error("User ID is required");
+  }
+
+  try {
+    // Calculate the skip and take values for pagination
+    const skip = (page - 1) * limit; // Calculate the number of items to skip
+    const take = parseInt(limit, 10); // Limit number of items per page
+
+    // Fetch groups with pagination
+    const groups = await prisma.group.findMany({
+      skip: skip,
+      take: take,
+      where: {
+        // Optional filter for groups the user is a member of (or other conditions)
+        members: {
+          some: {
+            userId: userid,
+          },
+        },
+      },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                userName: true,
+                phone: true,
+              },
+            },
+          },
+        }, // Include members in the response
+      },
+    });
+
+    // Count the total number of groups to calculate the total pages
+    const totalGroups = await prisma.group.count({
+      where: {
+        members: {
+          some: {
+            userId: userid,
+          },
+        },
+      },
+    });
+
+    // Calculate the total number of pages
+    const totalPages = Math.ceil(totalGroups / limit);
+
+    // Return the paginated result
+    return {
+      success: true,
+      message: "Groups fetched successfully",
+      data: groups,
+      pagination: {
+        currentPage: page,
+        totalPages: totalPages,
+        totalGroups: totalGroups,
+        limit: limit,
+      },
+    };
+  } catch (error) {
+    logger.error("Error fetching groups:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    throw new Error("Failed to fetch groups");
+  }
+};
+
 export const createGroupService = async (req) => {
   logger.info(`Group Create Process Started At ${new Date().toISOString()}`);
   const { userid } = req.headers; // Current user ID
@@ -52,6 +127,7 @@ export const createGroupService = async (req) => {
     newGroup.members.forEach((member) => {
       const memberSocketId = getReceiverSocketId(member.userId);
       if (memberSocketId) {
+        io.to(memberSocketId).emit("groupCreated", { name: newGroup.name });
         io.sockets.sockets.get(memberSocketId).join(newGroup.id);
       }
     });
@@ -76,6 +152,54 @@ export const createGroupService = async (req) => {
       stack: error.stack,
     });
     throw new Error("Failed to create group");
+  }
+};
+
+export const joinGroupService = async (req) => {
+  const { userid } = req.headers;
+  const { groupId } = req.params;
+
+  if (!userid) {
+    throw new Error("User  ID is required");
+  }
+
+  try {
+    // Attempt to add the user as a group member
+    const newMember = await prisma.groupMember.create({
+      data: {
+        userId: userid,
+        groupId: groupId,
+      },
+    });
+
+    // Emit event to notify group members about the new member joining
+    const memberSocketId = getReceiverSocketId(userid);
+    if (memberSocketId) {
+      io.to(memberSocketId).emit("groupJoined", { groupId, userId: userid });
+      io.sockets.sockets.get(memberSocketId).join(groupId);
+    }
+
+    // Notify all users in the group room
+    io.to(groupId).emit("newMemberJoined", {
+      groupId,
+      userId: userid,
+    });
+
+    return {
+      success: true,
+      message: "User  has successfully joined the group",
+      data: newMember,
+    };
+  } catch (error) {
+    if (error.code === "P2002") {
+      throw new Error("User  is already a member of this group");
+    }
+
+    logger.error("Error joining group:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    throw new Error(error.message);
   }
 };
 
@@ -143,76 +267,3 @@ export const createGroupService = async (req) => {
 //     throw new Error("Failed to create group");
 //   }
 // };
-
-export const joinGroupService = async (req) => {
-  const { userid } = req.headers; // Current user ID
-  const { groupId } = req.params; // Group ID to join
-
-  if (!userid) {
-    throw new Error("User ID is required");
-  }
-
-  try {
-    // Check if the group exists and is public
-    // const group = await prisma.group.findUnique({
-    //   where: { id: groupId },
-    //   select: { isPublic: true },
-    // });
-
-    // if (!group) {
-    //   return {
-    //     success: false,
-    //     message: "Group not found",
-    //   };
-    // }
-
-    // if (!group.isPublic) {
-    //   return {
-    //     success: false,
-    //     message: "Group is not public",
-    //   };
-    // }
-
-    // Upsert to add user as a group member if not already added
-    const result = await prisma.groupMember.upsert({
-      where: {
-        groupId_userId: {
-          // Unique compound key for group membership
-          groupId: groupId,
-          userId: userid,
-        },
-      },
-      update: {}, // Leave empty because we don't want to update if it exists
-      create: {
-        userId: userid,
-        groupId: groupId,
-        joinedAt: new Date(),
-      },
-    });
-
-    if (!result) {
-      return {
-        success: false,
-        message: "User is already a member of this group",
-      };
-    }
-
-    // Emit a "joinGroupRoom" event to Socket.IO
-    // io.emit("joinGroupRoom", {
-    //   groupId,
-    //   userId: userid,
-    // });
-
-    // Return a success response
-    return {
-      success: true,
-      message: "User has successfully joined the group",
-    };
-  } catch (error) {
-    logger.error("Error joining group:", {
-      message: error.message,
-      stack: error.stack,
-    });
-    throw new Error("Failed to join group");
-  }
-};
