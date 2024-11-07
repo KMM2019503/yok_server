@@ -257,6 +257,174 @@ export const leaveGroupService = async (req) => {
   }
 };
 
+export const addMemberToGroupService = async (req) => {
+  const { userid } = req.headers; // ID of the user making the request
+  const { groupId, memberIds } = req.body; // ID of the group and IDs of the new members to be added
+
+  // Validate input
+  if (!userid) {
+    throw new Error("User  ID is required");
+  }
+  if (!groupId) {
+    throw new Error("Group ID is required");
+  }
+  if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
+    throw new Error("A list of member IDs is required");
+  }
+
+  try {
+    // Check if the current user is the creator of the group
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      select: { createdById: true },
+    });
+
+    if (!group) {
+      throw new Error("Group not found");
+    }
+
+    if (group.createdById !== userid) {
+      throw new Error("Only the group creator can add members");
+    }
+
+    // Check existing members in one query
+    const existingMembers = await prisma.groupMember.findMany({
+      where: {
+        groupId: groupId,
+        userId: { in: memberIds },
+      },
+      select: { userId: true },
+    });
+
+    const existingMemberIds = existingMembers.map((member) => member.userId);
+    const newMembers = memberIds.filter(
+      (id) => !existingMemberIds.includes(id)
+    );
+
+    if (newMembers.length === 0) {
+      return {
+        success: true,
+        message: "No new members to add, all members are already in the group.",
+      };
+    }
+
+    // Prepare the members data for Prisma createMany operation
+    const membersData = newMembers.map((id) => ({
+      userId: id,
+      groupId: groupId,
+    }));
+
+    // Add new members to the group in a single transaction
+    await prisma.$transaction(async (prisma) => {
+      await prisma.groupMember.createMany({
+        data: membersData,
+      });
+    });
+
+    // Batch socket join operations
+    const memberSocketIds = newMembers.map(getReceiverSocketId).filter(Boolean);
+    memberSocketIds.forEach((socketId) => {
+      io.sockets.sockets.get(socketId)?.join(groupId);
+    });
+
+    // Notify all users in the group room about the new members
+    io.to(groupId).emit("membersAdded", {
+      groupId,
+      newMemberIds: newMembers,
+    });
+
+    return {
+      success: true,
+      message: "Members have been successfully added to the group",
+    };
+  } catch (error) {
+    logger.error("Error adding members to group:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    throw new Error(error.message);
+  }
+};
+
+export const removeMemberFromGroupService = async (req) => {
+  const { userid } = req.headers; // ID of the user making the request
+  const { groupId, memberId } = req.body; // ID of the group and ID of the member to be removed
+
+  // Validate input
+  if (!userid) {
+    throw new Error("User  ID is required");
+  }
+  if (!groupId) {
+    throw new Error("Group ID is required");
+  }
+  if (!memberId) {
+    throw new Error("Member ID is required");
+  }
+
+  try {
+    // Check if the current user is the creator of the group
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      select: { createdById: true },
+    });
+
+    if (!group) {
+      throw new Error("Group not found");
+    }
+
+    if (group.createdById !== userid) {
+      throw new Error("Only the group creator can remove members");
+    }
+
+    // Check if the member exists in the group
+    const member = await prisma.groupMember.findUnique({
+      where: {
+        userId_groupId: {
+          userId: memberId,
+          groupId: groupId,
+        },
+      },
+    });
+
+    if (!member) {
+      throw new Error("Member not found in this group");
+    }
+
+    // Remove the member from the group
+    await prisma.groupMember.delete({
+      where: {
+        userId_groupId: {
+          userId: memberId,
+          groupId: groupId,
+        },
+      },
+    });
+
+    // Notify all users in the group room about the member leaving
+    io.to(groupId).emit("memberRemoved", {
+      groupId,
+      memberId,
+    });
+
+    // Optionally, if you want to remove the member from the socket room
+    const memberSocketId = getReceiverSocketId(memberId);
+    if (memberSocketId) {
+      io.sockets.sockets.get(memberSocketId)?.leave(groupId);
+    }
+
+    return {
+      success: true,
+      message: "Member has been successfully removed from the group",
+    };
+  } catch (error) {
+    logger.error("Error removing member from group:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    throw new Error(error.message);
+  }
+};
+
 // export const createGroupService = async (req) => {
 //   logger.info(`Group Create Process Started At ${new Date().toISOString()}`);
 //   const { userid } = req.headers; // Current user ID

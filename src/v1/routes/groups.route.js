@@ -2,36 +2,42 @@ import { Router } from "express";
 
 import { checkToken } from "../middlewares/checkAuth";
 import {
+  addMember,
   createGroup,
   getAllGroups,
   joinGroup,
   leaveGroup,
+  removeMember,
 } from "../controllers/groups.controller";
 
 const router = Router();
 
-// get all groups
-router.get("/", checkToken, getAllGroups);
-// router.get("/", getAllGroups);
+//Production
 
+router.get("/", checkToken, getAllGroups); // get all groups
+router.post("/", checkToken, createGroup); // create a new group
+router.post("/join/:groupId", checkToken, joinGroup); // join members to the group
+router.post("/leave/:groupId", checkToken, joinGroup); //leave members from the group
+router.post("/add-members", checkToken, addMember); //add members to the group
+router.post("/remove-members", checkToken, removeMember); //remove members from the group
+
+//Need to do
 // find a group by name
 //find a group by id
+//remove members from the group
+//delete group
 
-// create a new group
-router.post("/", checkToken, createGroup);
+//Development
+// router.get("/", getAllGroups);
+
 // router.post("/", createGroup);
 
-// join members to the group
-router.post("/join/:groupId", checkToken, joinGroup);
 // router.post("/join/:groupId", joinGroup);
 
-//leave members from the group
-router.post("/leave/:groupId", checkToken, joinGroup);
 // router.post("/leave/:groupId", leaveGroup);
 
-//add members to the group
-//remove members from the group
+// router.post("/add-members", addMember);
 
-//delete group
+// router.post("/remove-members", removeMember);
 
 export default router;

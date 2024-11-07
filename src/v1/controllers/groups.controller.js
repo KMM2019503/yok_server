@@ -1,8 +1,10 @@
 import {
+  addMemberToGroupService,
   createGroupService,
   getAllGroupsService,
   joinGroupService,
   leaveGroupService,
+  removeMemberFromGroupService,
 } from "../services/group.services.js";
 import logger from "../utils/logger.js";
 
@@ -51,6 +53,32 @@ export const leaveGroup = async (req, res) => {
     res.status(201).json(response);
   } catch (error) {
     logger.error("Error occurred during leave group:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: error.message, success: false });
+  }
+};
+
+export const addMember = async (req, res) => {
+  try {
+    const response = await addMemberToGroupService(req);
+    res.status(201).json(response);
+  } catch (error) {
+    logger.error("Error occurred during add member to group:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: error.message, success: false });
+  }
+};
+
+export const removeMember = async (req, res) => {
+  try {
+    const response = await removeMemberFromGroupService(req);
+    res.status(201).json(response);
+  } catch (error) {
+    logger.error("Error occurred during remove member from group:", {
       message: error.message,
       stack: error.stack,
     });
