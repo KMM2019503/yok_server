@@ -6,52 +6,130 @@ import { getReceiverSocketId, io } from "../../../socket/Socket";
 
 const prisma = new PrismaClient();
 
-export const sendDmMessageService = async (req) => {
-  logger.info(`Process is strated at ${new Date().toISOString()}`);
+// export const sendDmMessageService = async (req) => {
+//   logger.info(`Process is strated at ${new Date().toISOString()}`);
 
+//   const { userid } = req.headers;
+//   const { body } = req;
+//   const { content, conversationId, photoUrl, fileUrls, receiverId } = body;
+
+//   try {
+//     // Use transaction to group related database operations
+//     const result = await prisma.$transaction(async (prisma) => {
+//       let conversation;
+//       logger.info(`Conversation creation start at ${new Date().toISOString()}`);
+
+//       // Create a new conversation if conversationId is not provided
+//       if (!conversationId) {
+//         conversation = await prisma.conversation.create({
+//           data: {
+//             members: {
+//               create: [{ userId: userid }, { userId: receiverId }],
+//             },
+//           },
+//         });
+
+//         logger.info(
+//           `Conversation created successfully at ${new Date().toISOString()}`
+//         );
+//       } else {
+//         conversation = await prisma.conversation.findUnique({
+//           where: { id: conversationId },
+//         });
+
+//         if (!conversation) {
+//           logger.error("Conversation not found with the provided ID");
+//           throw new Error("Conversation not found");
+//         }
+
+//         logger.info(
+//           `Conversation found successfully at ${new Date().toISOString()}`
+//         );
+//       }
+
+//       const maxLength = 30;
+//       const truncatedContent =
+//         content.length > maxLength
+//           ? content.slice(0, maxLength) + "..."
+//           : content;
+
+//       const messageData = {
+//         senderId: userid,
+//         content,
+//         conversationId: conversation.id,
+//         photoUrl: photoUrl || [],
+//         fileUrls: fileUrls || [],
+//         status: "SENT",
+//       };
+
+//       // Save the message and update conversation data concurrently
+//       const [message] = await Promise.all([
+//         prisma.message.create({ data: messageData }),
+//         prisma.conversation.update({
+//           where: { id: conversation.id },
+//           data: {
+//             lastMessage: {
+//               content: truncatedContent,
+//               senderId: userid,
+//               createdAt: new Date(),
+//             },
+//             lastActivity: new Date(),
+//           },
+//         }),
+//       ]);
+//       logger.info(`Complete message creation at ${new Date().toISOString()}`);
+//       return { conversation, message };
+//     });
+
+//     const { message } = result;
+
+//     const receiverSocketId = getReceiverSocketId(receiverId);
+
+//     // Emit the new message if the receiver is connected
+//     if (receiverSocketId) {
+//       logger.info(
+//         `Emitting new message to socket at ${new Date().toISOString()}`
+//       );
+
+//       io.to(receiverSocketId).emit("newMessage", message, (ack) => {
+//         if (!ack) {
+//           logger.error(
+//             "Socket emit acknowledgment failed, recipient might be disconnected"
+//           );
+//         }
+//       });
+//       logger.info(`Emitting message finished at ${new Date().toISOString()}`);
+//     } else {
+//       logger.info("Receiver socket ID not found, message not emitted");
+//     }
+
+//     return {
+//       success: true,
+//       message,
+//     };
+//   } catch (error) {
+//     throw new Error(error.message);
+//   }
+// };
+
+export const sendDmMessageService = async (req) => {
   const { userid } = req.headers;
-  const { body } = req;
-  const { content, conversationId, photoUrl, fileUrls, receiverId } = body;
+  const { content, conversationId, photoUrl, fileUrls, receiverId } = req.body;
+
+  const now = new Date();
+  const maxLength = 30;
+  const truncatedContent =
+    content.length > maxLength ? content.slice(0, maxLength) + "..." : content;
 
   try {
     // Use transaction to group related database operations
     const result = await prisma.$transaction(async (prisma) => {
-      let conversation;
-      logger.info(`Conversation creation start at ${new Date().toISOString()}`);
-
-      // Create a new conversation if conversationId is not provided
-      if (!conversationId) {
-        conversation = await prisma.conversation.create({
-          data: {
-            members: {
-              create: [{ userId: userid }, { userId: receiverId }],
-            },
-          },
-        });
-
-        logger.info(
-          `Conversation created successfully at ${new Date().toISOString()}`
-        );
-      } else {
-        conversation = await prisma.conversation.findUnique({
-          where: { id: conversationId },
-        });
-
-        if (!conversation) {
-          logger.error("Conversation not found with the provided ID");
-          throw new Error("Conversation not found");
-        }
-
-        logger.info(
-          `Conversation found successfully at ${new Date().toISOString()}`
-        );
-      }
-
-      const maxLength = 30;
-      const truncatedContent =
-        content.length > maxLength
-          ? content.slice(0, maxLength) + "..."
-          : content;
+      const conversation = await getOrCreateConversation(
+        prisma,
+        conversationId,
+        userid,
+        receiverId
+      );
 
       const messageData = {
         senderId: userid,
@@ -71,44 +149,71 @@ export const sendDmMessageService = async (req) => {
             lastMessage: {
               content: truncatedContent,
               senderId: userid,
-              createdAt: new Date(),
+              createdAt: now,
             },
-            lastActivity: new Date(),
+            lastActivity: now,
           },
         }),
       ]);
-      logger.info(`Complete message creation at ${new Date().toISOString()}`);
+
       return { conversation, message };
     });
 
-    const { message } = result;
-
-    const receiverSocketId = getReceiverSocketId(receiverId);
-
-    // Emit the new message if the receiver is connected
-    if (receiverSocketId) {
-      logger.info(
-        `Emitting new message to socket at ${new Date().toISOString()}`
-      );
-
-      io.to(receiverSocketId).emit("newMessage", message, (ack) => {
-        if (!ack) {
-          logger.error(
-            "Socket emit acknowledgment failed, recipient might be disconnected"
-          );
-        }
-      });
-      logger.info(`Emitting message finished at ${new Date().toISOString()}`);
-    } else {
-      logger.info("Receiver socket ID not found, message not emitted");
-    }
+    await emitNewMessage(receiverId, result.message);
 
     return {
       success: true,
-      message,
+      message: result.message,
     };
   } catch (error) {
+    logger.error("Error sending DM message:", {
+      message: error.message,
+      stack: error.stack,
+    });
     throw new Error(error.message);
+  }
+};
+
+// Helper function to get or create a conversation
+const getOrCreateConversation = async (
+  prisma,
+  conversationId,
+  userid,
+  receiverId
+) => {
+  if (!conversationId) {
+    return await prisma.conversation.create({
+      data: {
+        members: {
+          create: [{ userId: userid }, { userId: receiverId }],
+        },
+      },
+    });
+  }
+
+  const conversation = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+  });
+  if (!conversation) {
+    throw new Error("Conversation not found");
+  }
+
+  return conversation;
+};
+
+// Helper function to emit the new message
+const emitNewMessage = async (receiverId, message) => {
+  const receiverSocketId = getReceiverSocketId(receiverId);
+  if (receiverSocketId) {
+    io.to(receiverSocketId).emit("newMessage", message, (ack) => {
+      if (!ack) {
+        logger.error(
+          "Socket emit acknowledgment failed, recipient might be disconnected"
+        );
+      }
+    });
+  } else {
+    logger.info("Receiver socket ID not found, message not emitted");
   }
 };
 
