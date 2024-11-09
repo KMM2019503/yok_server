@@ -79,6 +79,73 @@ export const getAllGroupsService = async (req) => {
   }
 };
 
+// export const getGroupService = async (req) => {
+//   const { userid } = req.headers; // Current user ID
+//   const { page = 1, limit = 10 } = req.query;
+
+//   try {
+//     // Calculate the skip and take values for pagination
+//     const skip = (page - 1) * limit; // Calculate the number of items to skip
+//     const take = parseInt(limit, 10); // Limit number of items per page
+//     const { groupId } = req.body;
+
+//     // Fetch groups with pagination
+//     const group = await prisma.group.findMany({
+//       skip: skip,
+//       take: take,
+//       where: {
+//         id: groupId
+//       },
+//       include: {
+//         members: {
+//           include: {
+//             user: {
+//               select: {
+//                 id: true,
+//                 userName: true,
+//                 phone: true,
+//               },
+//             },
+//           },
+//         }, // Include members in the response
+//       },
+//     });
+
+//     // Count the total number of groups to calculate the total pages
+//     const totalGroups = await prisma.group.count({
+//       where: {
+//         members: {
+//           some: {
+//             userId: userid,
+//           },
+//         },
+//       },
+//     });
+
+//     // Calculate the total number of pages
+//     const totalPages = Math.ceil(totalGroups / limit);
+
+//     // Return the paginated result
+//     return {
+//       success: true,
+//       message: "Groups fetched successfully",
+//       data: groups,
+//       pagination: {
+//         currentPage: page,
+//         totalPages: totalPages,
+//         totalGroups: totalGroups,
+//         limit: limit,
+//       },
+//     };
+//   } catch (error) {
+//     logger.error("Error fetching groups:", {
+//       message: error.message,
+//       stack: error.stack,
+//     });
+//     throw new Error("Failed to fetch groups");
+//   }
+// }
+
 export const createGroupService = async (req) => {
   logger.info(`Group Create Process Started At ${new Date().toISOString()}`);
   const { userid } = req.headers; // Current user ID

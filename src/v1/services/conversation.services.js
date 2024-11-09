@@ -5,9 +5,9 @@ const prisma = new PrismaClient();
 export const getAllConversationsService = async (req) => {
   try {
     const { userid } = req.headers;
-   
+
     if (!userid) {
-      throw new Error("User Id not found")
+      throw new Error("User Id not found");
     }
     const { page = 1, size = 15 } = req.query; // Pagination parameters
 
@@ -32,7 +32,7 @@ export const getAllConversationsService = async (req) => {
                 id: true,
                 userName: true,
                 phone: true,
-                profilePictureUrl: true
+                profilePictureUrl: true,
               },
             },
           },
@@ -80,11 +80,49 @@ export const getConversationService = async (req) => {
   try {
     const { userid } = req.headers;
     const { conversationId } = req.params;
-    const { page = 1, size = 15 } = req.query; // Pagination parameters
+    const { page = 1, size = 15, messageId } = req.query; // Pagination parameters
 
-    // Calculate the offset for pagination
+    // Calculate the offset for pagination if messageId is not provided
     const skip = (page - 1) * size;
     const take = Number(size);
+
+    // Define the query for fetching messages
+    const messagesQuery = {
+      orderBy: {
+        createdAt: "desc", // Order messages by creation date, most recent first
+      },
+      select: {
+        id: true,
+        content: true,
+        photoUrl: true,
+        fileUrls: true,
+        status: true,
+        createdAt: true,
+        sender: {
+          select: {
+            id: true,
+            userName: true,
+            phone: true,
+            profilePictureUrl: true,
+          },
+        },
+      },
+    };
+
+    // Adjust the message query based on the presence of messageId
+    if (messageId) {
+      // Fetch messages from the given messageId to the newest
+      messagesQuery.where = {
+        id: {
+          gt: messageId, // Fetch messages starting from this ID onward
+        },
+      };
+      messagesQuery.take = take;
+    } else {
+      // Use pagination if messageId is not provided
+      messagesQuery.skip = skip;
+      messagesQuery.take = take;
+    }
 
     // Fetch the conversation where the user is a member
     const conversation = await prisma.conversation.findUnique({
@@ -97,29 +135,7 @@ export const getConversationService = async (req) => {
         },
       },
       include: {
-        messages: {
-          skip: skip,
-          take: take,
-          orderBy: {
-            createdAt: "desc", // Order messages by creation date, most recent first
-          },
-          select: {
-            id: true,
-            content: true,
-            photoUrl: true,
-            fileUrls: true,
-            status: true,
-            createdAt: true,
-            sender: {
-              select: {
-                id: true,
-                userName: true,
-                phone: true,
-                profilePictureUrl: true,
-              },
-            },
-          },
-        },
+        messages: messagesQuery,
         lastMessage: true,
         pinnedItems: true,
       },
@@ -131,22 +147,28 @@ export const getConversationService = async (req) => {
         .json({ error: "Conversation not found or you are not a member." });
     }
 
-    // Fetch total number of messages in the conversation
-    const totalMessages = await prisma.message.count({
-      where: { conversationId: conversationId },
-    });
+    if (!messageId) {
+      // Fetch total number of messages in the conversation
+      const totalMessages = await prisma.message.count({
+        where: { conversationId: conversationId },
+      });
 
-    // Calculate total pages
-    const totalPages = Math.ceil(totalMessages / size);
+      // Calculate total pages
+      const totalPages = Math.ceil(totalMessages / size);
+      return {
+        success: true,
+        conversation,
+        pagination: {
+          currentPage: page,
+          totalPages: totalPages,
+          pageSize: size,
+          totalMessages: totalMessages,
+        },
+      };
+    }
     return {
       success: true,
       conversation,
-      pagination: {
-        currentPage: page,
-        totalPages: totalPages,
-        pageSize: size,
-        totalMessages: totalMessages,
-      },
     };
   } catch (error) {
     throw error;
