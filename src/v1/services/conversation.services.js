@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import logger from "../utils/logger";
 
 const prisma = new PrismaClient();
 
@@ -6,10 +7,49 @@ export const getAllConversationsService = async (req) => {
   try {
     const { userid } = req.headers;
 
+    logger.debug(req.headers);
+
     if (!userid) {
       throw new Error("User Id not found");
     }
-    const { page = 1, size = 15 } = req.query; // Pagination parameters
+    const { page, size } = req.query; // Pagination parameters
+    if (!(page && size)) {
+      const conversations = await prisma.conversation.findMany({
+        where: {
+          members: {
+            some: {
+              userId: userid,
+            },
+          },
+        },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  userName: true,
+                  phone: true,
+                  profilePictureUrl: true,
+                  firebaseUserId: true,
+                },
+              },
+            },
+          },
+          lastMessage: true,
+          pinnedItems: true,
+        },
+        orderBy: {
+          lastActivity: "desc",
+        },
+      });
+
+      logger.debug({ conversations });
+      return {
+        success: true,
+        conversations: conversations,
+      };
+    }
 
     // Calculate the offset for pagination
     const skip = (page - 1) * size;
@@ -33,6 +73,7 @@ export const getAllConversationsService = async (req) => {
                 userName: true,
                 phone: true,
                 profilePictureUrl: true,
+                firebaseUserId: true,
               },
             },
           },
@@ -98,12 +139,14 @@ export const getConversationService = async (req) => {
         fileUrls: true,
         status: true,
         createdAt: true,
+        conversationId: true,
         sender: {
           select: {
             id: true,
             userName: true,
             phone: true,
             profilePictureUrl: true,
+            firebaseUserId: true,
           },
         },
       },

@@ -142,7 +142,27 @@ export const sendDmMessageService = async (req) => {
 
       // Save the message and update conversation data concurrently
       const [message] = await Promise.all([
-        prisma.message.create({ data: messageData }),
+        prisma.message.create({
+          data: messageData,
+          select: {
+            id: true,
+            content: true,
+            photoUrl: true,
+            fileUrls: true,
+            status: true,
+            createdAt: true,
+            conversationId: true,
+            sender: {
+              select: {
+                id: true,
+                userName: true,
+                phone: true,
+                profilePictureUrl: true,
+                firebaseUserId: true,
+              },
+            },
+          },
+        }),
         prisma.conversation.update({
           where: { id: conversation.id },
           data: {
@@ -218,10 +238,14 @@ const emitNewMessage = async (receiverId, message) => {
 };
 
 export const getMessagesByConversationIdService = async (conversationId) => {
-  return await prisma.message.findMany({
+  const messages = await prisma.message.findMany({
     where: { conversationId },
     orderBy: { createdAt: "desc" },
   });
+  return {
+    success: true,
+    messages,
+  };
 };
 
 export const getMessagesByChannelIdService = async (channelId) => {

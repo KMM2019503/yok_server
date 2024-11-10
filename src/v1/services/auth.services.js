@@ -29,6 +29,13 @@ export const login = async (req, res) => {
     // Check if the user exists in the database
     let existingUser = await prisma.user.findUnique({
       where: { firebaseUserId: uid },
+      select: {
+        id: true,
+        phone: true,
+        userName: true,
+        firebaseUserId: true,
+        profilePictureUrl: true,
+      },
     });
 
     if (!existingUser) {
@@ -39,18 +46,19 @@ export const login = async (req, res) => {
           phone: PhoneNumber,
           // Add additional fields if needed
         },
+        select: {
+          id: true,
+          phone: true,
+          userName: true,
+          firebaseUserId: true,
+          profilePictureUrl: true,
+        },
       });
     }
 
     return {
       success: true,
-      user: {
-        id: existingUser.id,
-        phone: existingUser.phone,
-        userName: existingUser.userName,
-        profilePictureUrl: existingUser.profilePictureUrl,
-        status: existingUser.status,
-      },
+      user: existingUser,
     };
   } catch (err) {
     logger.error("login ~ error:", err);
