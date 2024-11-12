@@ -2,7 +2,7 @@
 import { PrismaClient } from "@prisma/client";
 import logger from "../utils/logger";
 import { getReceiverSocketId, io } from "../../../socket/Socket";
-// import { retryWithBackoff } from "../utils/helper";
+import { retryWithBackoff } from "../utils/helper";
 
 const prisma = new PrismaClient();
 
@@ -122,62 +122,67 @@ export const sendDmMessageService = async (req) => {
     content.length > maxLength ? content.slice(0, maxLength) + "..." : content;
 
   try {
-    // Use transaction to group related database operations
-    const result = await prisma.$transaction(async (prisma) => {
-      const conversation = await getOrCreateConversation(
-        prisma,
-        conversationId,
-        userid,
-        receiverId
-      );
+    const result = await retryWithBackoff(
+      async () => {
+        return await prisma.$transaction(async (prisma) => {
+          const conversation = await getOrCreateConversation(
+            prisma,
+            conversationId,
+            userid,
+            receiverId
+          );
 
-      const messageData = {
-        senderId: userid,
-        content,
-        conversationId: conversation.id,
-        photoUrl: photoUrl || [],
-        fileUrls: fileUrls || [],
-        status: "SENT",
-      };
+          const messageData = {
+            senderId: userid,
+            content,
+            conversationId: conversation.id,
+            photoUrl: photoUrl || [],
+            fileUrls: fileUrls || [],
+            status: "SENT",
+          };
 
-      // Save the message and update conversation data concurrently
-      const [message] = await Promise.all([
-        prisma.message.create({
-          data: messageData,
-          select: {
-            id: true,
-            content: true,
-            photoUrl: true,
-            fileUrls: true,
-            status: true,
-            createdAt: true,
-            conversationId: true,
-            sender: {
+          // Save the message and update conversation data concurrently
+          const [message] = await Promise.all([
+            prisma.message.create({
+              data: messageData,
               select: {
                 id: true,
-                userName: true,
-                phone: true,
-                profilePictureUrl: true,
-                firebaseUserId: true,
+                content: true,
+                photoUrl: true,
+                fileUrls: true,
+                status: true,
+                createdAt: true,
+                conversationId: true,
+                sender: {
+                  select: {
+                    id: true,
+                    userName: true,
+                    phone: true,
+                    profilePictureUrl: true,
+                    firebaseUserId: true,
+                  },
+                },
               },
-            },
-          },
-        }),
-        prisma.conversation.update({
-          where: { id: conversation.id },
-          data: {
-            lastMessage: {
-              content: truncatedContent,
-              senderId: userid,
-              createdAt: now,
-            },
-            lastActivity: now,
-          },
-        }),
-      ]);
+            }),
+            prisma.conversation.update({
+              where: { id: conversation.id },
+              data: {
+                lastMessage: {
+                  content: truncatedContent,
+                  senderId: userid,
+                  createdAt: now,
+                },
+                lastActivity: now,
+              },
+            }),
+          ]);
 
-      return { conversation, message };
-    });
+          return { conversation, message };
+        });
+      },
+      4,
+      500
+    ); // retry up to 3 times with a 500ms starting delay
 
     await emitNewMessage(receiverId, result.message);
 
