@@ -120,6 +120,58 @@ export const getAllConversationsService = async (req) => {
 export const getConversationService = async (req) => {
   try {
     const { userid } = req.headers;
+
+    logger.debug(req.headers);
+
+    if (!userid) {
+      throw new Error("User Id not found");
+    }
+
+    // Fetch conversations where the user is a member, with pagination
+    const conversation = await prisma.conversation.findFirst({
+      where: {
+        members: {
+          some: {
+            userId: userid,
+          },
+        },
+      },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                userName: true,
+                phone: true,
+                profilePictureUrl: true,
+                firebaseUserId: true,
+              },
+            },
+          },
+        },
+        lastMessage: true,
+        pinnedItems: true,
+      },
+      orderBy: {
+        lastActivity: "desc",
+      },
+      skip: skip,
+      take: take,
+    });
+
+    return {
+      success: true,
+      conversation,
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getConversationMessagesService = async (req) => {
+  try {
+    const { userid } = req.headers;
     const { conversationId } = req.params;
     const { page = 1, size = 15, messageId } = req.query; // Pagination parameters
 
