@@ -10,13 +10,13 @@ const router = Router();
 
 // Get all conversations for the authenticated user with pagination
 // router.get("/", checkToken, getAllConversations);
-router.get("/", getAllConversations);
+router.get("/", checkToken, getAllConversations);
 
 // get conversation messages by conversation id
 router.get("/:conversationId/messages", checkToken, getConversationMessages);
 
 // get conversations by conversation id
 
-router.get("/:conversationId", getConversation);
+router.get("/:conversationId", checkToken, getConversation);
 
 export default router;
