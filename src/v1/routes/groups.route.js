@@ -4,6 +4,7 @@ import { checkToken } from "../middlewares/checkAuth";
 import {
   addMember,
   createGroup,
+  findGroupByName,
   getAllGroups,
   joinGroup,
   leaveGroup,
@@ -27,6 +28,9 @@ const router = Router();
 //delete group
 
 //Development
+
+router.get("/findGroupByName", findGroupByName);
+
 router.get("/", getAllGroups);
 
 router.post("/", createGroup);

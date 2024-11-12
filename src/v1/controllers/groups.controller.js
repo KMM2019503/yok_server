@@ -1,12 +1,26 @@
 import {
   addMemberToGroupService,
   createGroupService,
+  findGroupByNameService,
   getAllGroupsService,
   joinGroupService,
   leaveGroupService,
   removeMemberFromGroupService,
 } from "../services/group.services.js";
 import logger from "../utils/logger.js";
+
+export const findGroupByName = async (req, res) => {
+  try {
+    const response = await findGroupByNameService(req);
+    res.status(200).json(response);
+  } catch (error) {
+    logger.error("Error occurred during Find Group By Name:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: error.message, success: false });
+  }
+};
 
 export const getAllGroups = async (req, res) => {
   try {

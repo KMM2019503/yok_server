@@ -7,6 +7,7 @@ import MessageRoutes from "./message.route"
 import ConversationRoutes from "./conversation.route"
 import ContactRoutes from "./contact.routes"
 import GroupRoutes from "./groups.route"
+import multiSearchRoutes from "./multiSearch.routes"
 
 const router = Router();
 
@@ -18,6 +19,8 @@ router.use("/messages", MessageRoutes)
 router.use("/conversations", ConversationRoutes)
 router.use('/contacts', ContactRoutes)
 router.use('/groups', GroupRoutes)
+
+router.use('/multiSearch', multiSearchRoutes)
 
 
 // Add other routes here

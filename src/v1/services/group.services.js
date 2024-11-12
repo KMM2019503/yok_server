@@ -4,6 +4,129 @@ import { getReceiverSocketId, io } from "../../../socket/Socket";
 
 const prisma = new PrismaClient();
 
+// MongoDB URI (Ensure it's correct for your setup)
+const uri = process.env.DATABASE_URL; // Set this in your .env file for MongoDB URI
+
+export const findGroupByNameService = async (req) => {
+  const { groupName } = req.query;
+  const { userid } = req.headers; // Current user ID
+
+  if (!groupName) {
+    throw new Error("Group name is required");
+  }
+
+  try {
+    // Run the MongoDB Atlas Search query using Prisma's $runCommandRaw
+    const result = await prisma.$runCommandRaw({
+      aggregate: "groups", // Specify the collection name
+      pipeline: [
+        {
+          $search: {
+            index: "default", // Use your actual Atlas Search index name
+            text: {
+              query: groupName,
+              path: "name", // Field to search in
+              fuzzy: {}, // Enable fuzzy search if needed
+            },
+          },
+        },
+        {
+          $project: {
+            name: 1,
+            description: 1,
+            isPublic: 1,
+            profilePictureUrl: 1,
+          },
+        },
+      ],
+      cursor: {},
+    });
+
+    // Check if any groups were found
+    if (result.cursor.firstBatch.length === 0) {
+      return {
+        success: false,
+        message: "No groups found matching the name",
+      };
+    }
+
+    // Filter out private groups if necessary (check access for the user)
+    const groups = result.cursor.firstBatch.filter((group) => group.isPublic);
+
+    return {
+      success: true,
+      message: "Groups found successfully",
+      data: groups,
+    };
+  } catch (error) {
+    logger.error("Error finding groups by name with Atlas Search:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    throw new Error("Failed to find groups by name");
+  }
+};
+
+// export const findGroupByNameService = async (req) => {
+//   const { groupName } = req.query;
+//   const { userid } = req.headers;
+
+//   if (!groupName) {
+//     throw new Error("Group name is required");
+//   }
+
+//   try {
+//     const group = await prisma.group.findFirst({
+//       where: {
+//         name: groupName,
+//       },
+//       include: {
+//         members: {
+//           include: {
+//             user: {
+//               select: {
+//                 id: true,
+//                 userName: true,
+//                 phone: true,
+//               },
+//             },
+//           },
+//         },
+//       },
+//     });
+
+//     if (!group) {
+//       return {
+//         success: false,
+//         message: "Group not found",
+//       };
+//     }
+
+//     // Check if the group is public or if the user is a member
+//     const isUserMember = group.members.some(
+//       (member) => member.userId === userid
+//     );
+//     if (!group.isPublic && !isUserMember) {
+//       return {
+//         success: false,
+//         message: "Access denied. This group is private.",
+//       };
+//     }
+
+//     return {
+//       success: true,
+//       message: "Group found successfully",
+//       data: group,
+//     };
+//   } catch (error) {
+//     logger.error("Error finding group by name:", {
+//       message: error.message,
+//       stack: error.stack,
+//     });
+//     throw new Error("Failed to find group by name");
+//   }
+// };
+
 export const getAllGroupsService = async (req) => {
   const { userid } = req.headers; // Current user ID
   const { page = 1, limit = 10 } = req.query; // Default to page 1 and limit to 10
