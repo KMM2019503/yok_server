@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import logger from "../utils/logger";
 import { getReceiverSocketId, io } from "../../../socket/Socket";
 import { retryWithBackoff } from "../utils/helper";
+import { sendNotification } from "../utils/notifications/noti";
 
 const prisma = new PrismaClient();
 
@@ -78,9 +79,28 @@ export const sendDmMessageService = async (req) => {
       500
     ); // retry up to 3 times with a 500ms starting delay
 
-    console.log("🚀 ~ sendDmMessageService ~ result:", result);
+    const receiver = result.conversation.members.find(
+      (member) => member.user.id === receiverId
+    );
 
-    await emitNewMessage(receiverId, result.message);
+    const emitReturn = await emitNewMessage(receiverId, result.message);
+
+    if (!emitReturn) {
+      console.log("user is offline. Notification process is started.");
+      const payload = {
+        title: `New Message from ${result.message.sender.userName}`,
+        body: truncatedContent,
+        icon: result.message.sender.profilePictureUrl,
+        data: {
+          sender: result.message.sender.userName,
+        },
+      };
+
+      const fcmIds = [];
+      fcmIds.push(receiver.user.firebaseUserId);
+
+      await sendNotification(fcmIds, payload);
+    }
 
     return {
       success: true,
@@ -163,8 +183,11 @@ const emitNewMessage = async (receiverId, message) => {
         );
       }
     });
+
+    return true;
   } else {
-    logger.info("Receiver socket ID not found, message not emitted");
+    // sending notification if the user is offline
+    return false;
   }
 };
 
