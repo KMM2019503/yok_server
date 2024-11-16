@@ -1,3 +1,5 @@
+//conversation.services.js
+
 import { PrismaClient } from "@prisma/client";
 import logger from "../utils/logger";
 
@@ -117,69 +119,13 @@ export const getAllConversationsService = async (req) => {
   }
 };
 
-export const getConversationService = async (req) => {
-  try {
-    const { userid } = req.headers;
-
-    logger.debug(req.headers);
-
-    if (!userid) {
-      throw new Error("User Id not found");
-    }
-
-    // Fetch conversations where the user is a member, with pagination
-    const conversation = await prisma.conversation.findFirst({
-      where: {
-        members: {
-          some: {
-            userId: userid,
-          },
-        },
-      },
-      include: {
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                userName: true,
-                phone: true,
-                profilePictureUrl: true,
-                firebaseUserId: true,
-              },
-            },
-          },
-        },
-        lastMessage: true,
-        pinnedItems: true,
-      },
-      orderBy: {
-        lastActivity: "desc",
-      },
-      skip: skip,
-      take: take,
-    });
-
-    return {
-      success: true,
-      conversation,
-    };
-  } catch (error) {
-    throw error;
-  }
-};
-
-export const getConversationMessagesService = async (req) => {
+export const getConversationMessagesService = async (req, res) => {
   try {
     const { userid } = req.headers;
     const { conversationId } = req.params;
-    const { page = 1, size = 15, messageId } = req.query; // Pagination parameters
+    const { page, size, messageId } = req.query; // Pagination parameters
 
-    // Calculate the offset for pagination if messageId is not provided
-    const skip = (page - 1) * size;
-    const take = Number(size);
-
-    // Define the query for fetching messages
+    // Define the base query for fetching messages
     const messagesQuery = {
       orderBy: {
         createdAt: "desc", // Order messages by creation date, most recent first
@@ -204,17 +150,19 @@ export const getConversationMessagesService = async (req) => {
       },
     };
 
-    // Adjust the message query based on the presence of messageId
+    // Modify the query based on messageId or pagination parameters
     if (messageId) {
-      // Fetch messages from the given messageId to the newest
+      // Fetch messages from the given messageId onward
       messagesQuery.where = {
         id: {
-          gt: messageId, // Fetch messages starting from this ID onward
+          gt: messageId,
         },
       };
-      messagesQuery.take = take;
-    } else {
-      // Use pagination if messageId is not provided
+    } else if (page && size) {
+      // Apply pagination if page and size are provided
+      const skip = (page - 1) * size;
+      const take = Number(size);
+
       messagesQuery.skip = skip;
       messagesQuery.take = take;
     }
@@ -237,12 +185,10 @@ export const getConversationMessagesService = async (req) => {
     });
 
     if (!conversation) {
-      return res
-        .status(404)
-        .json({ error: "Conversation not found or you are not a member." });
+      throw new Error(`Conversation not found or you are not a member.`);
     }
 
-    if (!messageId) {
+    if (page && size && !messageId) {
       // Fetch total number of messages in the conversation
       const totalMessages = await prisma.message.count({
         where: { conversationId: conversationId },
@@ -261,6 +207,7 @@ export const getConversationMessagesService = async (req) => {
         },
       };
     }
+
     return {
       success: true,
       conversation,
