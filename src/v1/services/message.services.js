@@ -257,7 +257,7 @@ export const sendGroupMessageService = async (req) => {
 
     console.log("🚀 ~ sendGroupMessageService ~ result:", result);
 
-    await emitNewGroupMessage(group.id, result.message);
+    await emitNewGroupMessage(result.group.id, result.message);
 
     // Generate Notification
 
@@ -276,11 +276,12 @@ export const sendGroupMessageService = async (req) => {
 
 // Helper function to emit the new group message to all members
 const emitNewGroupMessage = async (roomId, message) => {
-  io.to(roomId).emit("newGroupMessage", message, (ack) => {
-    if (!ack) {
-      logger.error(
-        "Socket emit acknowledgment failed, some recipients might be disconnected"
-      );
-    }
-  });
+  // io.to(roomId).emit("newGroupMessage", message, (ack) => {
+  //   if (!ack) {
+  //     logger.error(
+  //       "Socket emit acknowledgment failed, some recipients might be disconnected"
+  //     );
+  //   }
+  // });
+  io.to(roomId).emit("newGroupMessage", message);
 };

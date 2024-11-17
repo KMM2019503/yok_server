@@ -4,6 +4,7 @@ import { checkToken } from "../middlewares/checkAuth";
 import {
   //   sendMessage,
   sendDmMessage,
+  sendGroupMessage,
 } from "../controllers/message.controller";
 
 const router = Router();
@@ -16,7 +17,9 @@ const router = Router();
 router.post("/direct-message", sendDmMessage);
 
 //Send Group messages
-// router.post("/group-messages", checkToken, sendGroupMessage);
+router.post("/group-messages", checkToken, sendGroupMessage);
+// router.post("/group-messages", sendGroupMessage);
+
 // router.post("/direct-message", sendDmMessage);
 
 export default router;
