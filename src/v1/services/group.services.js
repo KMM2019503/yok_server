@@ -160,6 +160,7 @@ export const getAllGroupsService = async (req) => {
                 id: true,
                 userName: true,
                 phone: true,
+                firebaseUserId: true,
               },
             },
           },
@@ -308,7 +309,18 @@ export const createGroupService = async (req) => {
         },
       },
       include: {
-        members: true, // Include members in the response
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                userName: true,
+                phone: true,
+                firebaseUserId: true,
+              },
+            },
+          },
+        }, // Include members in the response
       },
     });
     logger.info(`Group Create Query Finished At ${new Date().toISOString()}`);
@@ -323,12 +335,7 @@ export const createGroupService = async (req) => {
     });
 
     // Notify all users in the group room of the new group creation
-    io.to(newGroup.id).emit("newGroupCreated", {
-      groupId: newGroup.id,
-      name: newGroup.name,
-      createdById: userid,
-      members: newGroup.members.map((m) => m.userId),
-    });
+    io.to(newGroup.id).emit("newGroupCreated", newGroup);
 
     // Return the created group details
     return {
