@@ -95,7 +95,6 @@ export const sendDmMessageService = async (req) => {
   }
 };
 
-// Helper function to get or create a conversation
 const getOrCreateConversation = async (
   prisma,
   conversationId,
@@ -103,6 +102,43 @@ const getOrCreateConversation = async (
   receiverId
 ) => {
   if (!conversationId) {
+    // Check if a conversation already exists between the sender and receiver
+    const existingConversation = await prisma.conversation.findFirst({
+      where: {
+        members: {
+          every: {
+            userId: {
+              in: [userid, receiverId],
+            },
+          },
+          some: {
+            userId: userid,
+          },
+        },
+      },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                userName: true,
+                phone: true,
+                profilePictureUrl: true,
+                firebaseUserId: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // If an existing conversation is found, return it
+    if (existingConversation) {
+      return existingConversation;
+    }
+
+    // If no conversation is found, create a new one
     return await prisma.conversation.create({
       data: {
         members: {
@@ -127,6 +163,7 @@ const getOrCreateConversation = async (
     });
   }
 
+  // If conversationId is provided, fetch the conversation
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
     include: {
@@ -145,6 +182,7 @@ const getOrCreateConversation = async (
       },
     },
   });
+
   if (!conversation) {
     throw new Error("Conversation not found");
   }
