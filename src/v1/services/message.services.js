@@ -285,3 +285,143 @@ const emitNewGroupMessage = async (roomId, message) => {
   // });
   io.to(roomId).emit("newGroupMessage", message);
 };
+
+const sendChannelMessageService = async (req) => {
+  const { userid } = req.headers;
+  const { content, channelId, photoUrl, fileUrls } = req.body;
+
+  const now = new Date();
+  const maxLength = 30;
+  const truncatedContent =
+    content.length > maxLength ? content.slice(0, maxLength) + "..." : content;
+
+  try {
+    const result = await retryWithBackoff(
+      async () => {
+        return await prisma.$transaction(async (prisma) => {
+          const channel = await prisma.channel.findUnique({
+            where: { id: channelId },
+            include: {
+              members: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      firebaseUserId: true,
+                    },
+                  },
+                },
+              },
+            },
+          });
+
+          if (!channel) {
+            throw new Error("Channel not found");
+          }
+
+          const messageData = {
+            senderId: userid,
+            content,
+            channelId: channel.id,
+            photoUrl: photoUrl || [],
+            fileUrls: fileUrls || [],
+            status: "SENT",
+          };
+
+          // Save the message and update channel data concurrently
+          const [message] = await Promise.all([
+            prisma.message.create({
+              data: messageData,
+              select: {
+                id: true,
+                content: true,
+                photoUrl: true,
+                fileUrls: true,
+                status: true,
+                createdAt: true,
+                channelId: true,
+                sender: {
+                  select: {
+                    id: true,
+                    userName: true,
+                    phone: true,
+                    profilePictureUrl: true,
+                    firebaseUserId: true,
+                  },
+                },
+              },
+            }),
+            prisma.channel.update({
+              where: { id: channel.id },
+              data: {
+                lastMessage: {
+                  content: truncatedContent,
+                  senderId: userid,
+                  createdAt: now,
+                },
+                lastActivity: now,
+              },
+            }),
+          ]);
+
+          // Identify offline members
+          const offlineMembers = channel.members.filter((member) => {
+            return !getReceiverSocketId(member.user.id);
+          });
+
+          return { channel, message, offlineMembers };
+        });
+      },
+      4,
+      500
+    );
+
+    console.log("🚀 ~ sendChannelMessageService ~ result:", result);
+
+    await emitNewChannelMessage(result.channel.id, result.message);
+
+    // Generate notifications for offline members
+    generateOfflineNotifications(
+      result.channel.id,
+      result.offlineMembers,
+      result.message
+    );
+
+    return {
+      success: true,
+      message: result.message,
+    };
+  } catch (error) {
+    logger.error("Error sending channel message:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    throw new Error(error.message);
+  }
+};
+
+// Helper function to emit the new channel message to all members
+const emitNewChannelMessage = async (roomId, message) => {
+  io.to(roomId).emit("newChannelMessage", message);
+};
+
+// Helper function to generate notifications for offline users
+const generateOfflineNotifications = async (
+  channelId,
+  offlineMembers,
+  message
+) => {
+  try {
+    for (const member of offlineMembers) {
+      await createNotification({
+        userId: member.user.id,
+        type: "CHANNEL_MESSAGE",
+        referenceId: channelId,
+        content: `New message in channel: "${message.content}"`,
+        createdAt: new Date(),
+      });
+    }
+  } catch (error) {
+    logger.error("Error generating offline notifications:", error);
+  }
+};

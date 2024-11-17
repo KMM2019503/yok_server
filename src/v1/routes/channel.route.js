@@ -16,9 +16,10 @@ import {
 const router = Router();
 
 router.get("/get-channel-by-id/:channelId", checkToken, getChannelById);
-router.get("/", checkToken, getAllChannels);
-router.post("/", checkToken, createChannel);
+router.get("/", getAllChannels);
 router.put("/update/:channelId", checkToken, isSuperAdmin, updateChannel);
+
+router.post("/", checkToken, createChannel);
 
 router.post(
   "/:channelId/add-admin",
