@@ -159,7 +159,7 @@ export const getAllChannelsService = async (req) => {
 //   }
 // };
 
-export const getChannel = async (req) => {
+export const getChannelMessages = async (req) => {
   try {
     const { channelId } = req.params;
     const { page = 1, size = 15 } = req.query; // Pagination parameters

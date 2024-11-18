@@ -8,7 +8,7 @@ import {
   createChannel,
   deleteChannel,
   getAllChannels,
-  getChannelById,
+  getChannelMessagesByChannelId,
   removeAdminFromChannel,
   updateChannel,
 } from "../controllers/channel.controller";
@@ -17,8 +17,8 @@ const router = Router();
 
 router.use(checkToken);
 
-// Get a channel by its ID, requires user to be authenticated and have admin rights.
-router.get("/get-channel-by-id/:channelId", getChannelById);
+// Get a channel Messages by channel ID, requires user to be authenticated and have admin rights.
+router.get("/get-channel-by-id/:channelId", getChannelMessagesByChannelId);
 
 // Get all channels, requires user to be authenticated.
 router.get("/", getAllChannels);
