@@ -195,6 +195,70 @@ export const getAllGroupsService = async (req) => {
 //   }
 // };
 
+export const getGroupMessageService = async (req) => {
+  const { userid } = req.headers;
+  const { groupId } = req.params;
+  const { messageId } = req.query; // Only keep messageId for conditional queries
+
+  const messagesQuery = {
+    orderBy: {
+      createdAt: "desc", // Order messages by creation date, most recent first
+    },
+    select: {
+      id: true,
+      content: true,
+      photoUrl: true,
+      fileUrls: true,
+      status: true,
+      createdAt: true,
+      conversationId: true,
+      sender: {
+        select: {
+          id: true,
+          userName: true,
+          phone: true,
+          profilePictureUrl: true,
+          firebaseUserId: true,
+        },
+      },
+    },
+  };
+
+  // Modify the query if messageId is provided
+  if (messageId) {
+    // Fetch messages from the given messageId onward
+    messagesQuery.where = {
+      id: {
+        gt: messageId,
+      },
+    };
+  }
+
+  const group = await prisma.group.findFirst({
+    where: {
+      id: groupId,
+      members: {
+        some: {
+          userId: userid,
+        },
+      },
+    },
+    include: {
+      messages: messagesQuery,
+      lastMessage: true,
+    },
+  });
+
+  if (!group) {
+    throw new Error(`Group not found or you are not a member.`);
+  }
+
+  return {
+    success: true,
+    group,
+  };
+};
+
 export const createGroupService = async (req) => {
   logger.info(`Group Create Process Started At ${new Date().toISOString()}`);
   const { userid } = req.headers; // Current user ID
