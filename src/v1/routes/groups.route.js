@@ -6,6 +6,7 @@ import {
   createGroup,
   findGroupByName,
   getAllGroups,
+  getGroupMessages,
   joinGroup,
   leaveGroup,
   removeMember,
@@ -19,6 +20,9 @@ router.get("/findGroupByName", findGroupByName);
 
 //get all groups by user id
 router.get("/", getAllGroups);
+
+//get group messages by group id
+router.get("/:groupId/get-group-messages", getGroupMessages);
 
 // create group
 router.post("/", createGroup);
