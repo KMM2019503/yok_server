@@ -10,6 +10,6 @@ services:
       - "3000:3000" # Map port 3000 on the host to port 3000 in the container
     environment:
       - NODE_ENV=production # Set environment variable
-      - MONGODB_URI=${MONGODB_URI}
+      - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY} # Use environment variable
     restart: always # Automatically restart the container if it exits
