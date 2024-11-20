@@ -378,11 +378,6 @@ export const getConversationService = async (req) => {
         lastMessage: true,
         pinnedItems: true,
       },
-      orderBy: {
-        lastActivity: "desc",
-      },
-      skip: skip,
-      take: take,
     });
 
     return {

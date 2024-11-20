@@ -17,49 +17,73 @@ export const sendDmMessageService = async (req) => {
     content.length > maxLength ? content.slice(0, maxLength) + "..." : content;
 
   try {
-    const result = await retryWithBackoff(
-      async () => {
-        return await prisma.$transaction(async (prisma) => {
-          const conversation = await getOrCreateConversation(
-            prisma,
-            conversationId,
-            userid,
-            receiverId
-          );
+    // Step 1: Create message and fetch conversation
+    const { message, conversation } = await prisma.$transaction(
+      async (prismaClient) => {
+        const conversation = await getOrCreateConversation(
+          prismaClient,
+          conversationId,
+          userid,
+          receiverId
+        );
 
-          const messageData = {
+        logger.debug({ conversation });
+
+        const message = await prismaClient.message.create({
+          data: {
             senderId: userid,
             content,
             conversationId: conversation.id,
             photoUrl: photoUrl || [],
             fileUrls: fileUrls || [],
             status: "SENT",
-          };
-
-          // Save the message and update conversation data concurrently
-          const [message] = await Promise.all([
-            prisma.message.create({
-              data: messageData,
+          },
+          select: {
+            id: true,
+            content: true,
+            photoUrl: true,
+            fileUrls: true,
+            status: true,
+            createdAt: true,
+            conversationId: true,
+            sender: {
               select: {
                 id: true,
-                content: true,
-                photoUrl: true,
-                fileUrls: true,
-                status: true,
-                createdAt: true,
-                conversationId: true,
-                sender: {
-                  select: {
-                    id: true,
-                    userName: true,
-                    phone: true,
-                    profilePictureUrl: true,
-                    firebaseUserId: true,
-                  },
-                },
+                userName: true,
+                profilePictureUrl: true,
+                firebaseUserId: true,
               },
-            }),
-            prisma.conversation.update({
+            },
+          },
+        });
+
+        return { message, conversation };
+      }
+    );
+
+    // Step 2: Immediately return the response
+    const response = {
+      success: true,
+      message,
+    };
+
+    // Step 3: Serialize conversation update in background
+    (async () => {
+      try {
+        // Serialize conversation update to prevent race conditions
+        await prisma.$transaction(async (prismaClient) => {
+          const currentConversation =
+            await prismaClient.conversation.findUnique({
+              where: { id: conversation.id },
+              select: { lastMessage: true },
+            });
+
+          if (
+            !currentConversation.lastMessage ||
+            new Date(currentConversation.lastMessage.createdAt) <=
+              new Date(message.createdAt)
+          ) {
+            await prismaClient.conversation.update({
               where: { id: conversation.id },
               data: {
                 lastMessage: {
@@ -69,49 +93,43 @@ export const sendDmMessageService = async (req) => {
                 },
                 lastActivity: now,
               },
-            }),
-          ]);
-
-          return { conversation, message };
+            });
+          }
         });
-      },
-      4,
-      500
-    ); // retry up to 3 times with a 500ms starting delay
 
-    const receiver = result.conversation.members.find(
-      (member) => member.user.id === receiverId
-    );
+        // Emit message to receiver
+        const emitReturn = await emitNewMessage(receiverId, message);
 
-    const emitReturn = await emitNewMessage(receiverId, result.message);
+        if (!emitReturn) {
+          // Handle offline user notifications
+          const receiver = conversation.members.find(
+            (m) => m.user.id === receiverId
+          );
+          if (receiver) {
+            const payload = {
+              title: `New Message from ${message.sender.userName}`,
+              body: truncatedContent,
+              icon: message.sender.profilePictureUrl,
+              data: { sender: message.sender.userName },
+            };
+            await sendNotification([receiver.user.firebaseUserId], payload);
+          }
+        }
+      } catch (error) {
+        logger.error("Error in post-message processing tasks:", {
+          message: error.message,
+          stack: error.stack,
+        });
+      }
+    })();
 
-    if (!emitReturn) {
-      console.log("user is offline. Notification process is started.");
-      const payload = {
-        title: `New Message from ${result.message.sender.userName}`,
-        body: truncatedContent,
-        icon: result.message.sender.profilePictureUrl,
-        data: {
-          sender: result.message.sender.userName,
-        },
-      };
-
-      const fcmIds = [];
-      fcmIds.push(receiver.user.firebaseUserId);
-
-      await sendNotification(fcmIds, payload);
-    }
-
-    return {
-      success: true,
-      message: result.message,
-    };
+    return response;
   } catch (error) {
     logger.error("Error sending DM message:", {
       message: error.message,
       stack: error.stack,
     });
-    throw new Error(error.message);
+    throw error;
   }
 };
 
