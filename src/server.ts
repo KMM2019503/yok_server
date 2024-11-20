@@ -29,6 +29,14 @@ const startServer = () => {
   // Use routes
   app.use("/v1/", routes);
 
+  app.get("/healthz", (req: Request, res: Response) => {
+    res.status(200).json({
+      status: "ok",
+      message: "Server is healthy",
+      timestamp: new Date().toISOString(),
+    });
+  });
+
   // Global error handler
   app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     logger.error(err.stack || err.message); // Use Winston for error logging
