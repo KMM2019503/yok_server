@@ -1,5 +1,6 @@
 import { response } from "express";
 import {
+  sendChannelMessageService,
   sendDmMessageService,
   sendGroupMessageService,
 } from "../services/message.services";

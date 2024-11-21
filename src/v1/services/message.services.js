@@ -286,7 +286,7 @@ const emitNewGroupMessage = async (roomId, message) => {
   io.to(roomId).emit("newGroupMessage", message);
 };
 
-const sendChannelMessageService = async (req) => {
+export const sendChannelMessageService = async (req) => {
   const { userid } = req.headers;
   const { content, channelId, photoUrl, fileUrls } = req.body;
 
