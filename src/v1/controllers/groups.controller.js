@@ -3,6 +3,7 @@ import {
   createGroupService,
   findGroupByNameService,
   getAllGroupsService,
+  getGroupMessageService,
   joinGroupService,
   leaveGroupService,
   removeMemberFromGroupService,
@@ -41,6 +42,19 @@ export const createGroup = async (req, res) => {
     res.status(201).json(response);
   } catch (error) {
     logger.error("Error occurred during create group:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: error.message, success: false });
+  }
+};
+
+export const getGroupMessages = async (req, res) => {
+  try {
+    const response = await getGroupMessageService(req);
+    res.status(200).json(response);
+  } catch (error) {
+    logger.error("Error occurred during get group messages:", {
       message: error.message,
       stack: error.stack,
     });

@@ -67,85 +67,17 @@ export const findGroupByNameService = async (req) => {
   }
 };
 
-// export const findGroupByNameService = async (req) => {
-//   const { groupName } = req.query;
-//   const { userid } = req.headers;
-
-//   if (!groupName) {
-//     throw new Error("Group name is required");
-//   }
-
-//   try {
-//     const group = await prisma.group.findFirst({
-//       where: {
-//         name: groupName,
-//       },
-//       include: {
-//         members: {
-//           include: {
-//             user: {
-//               select: {
-//                 id: true,
-//                 userName: true,
-//                 phone: true,
-//               },
-//             },
-//           },
-//         },
-//       },
-//     });
-
-//     if (!group) {
-//       return {
-//         success: false,
-//         message: "Group not found",
-//       };
-//     }
-
-//     // Check if the group is public or if the user is a member
-//     const isUserMember = group.members.some(
-//       (member) => member.userId === userid
-//     );
-//     if (!group.isPublic && !isUserMember) {
-//       return {
-//         success: false,
-//         message: "Access denied. This group is private.",
-//       };
-//     }
-
-//     return {
-//       success: true,
-//       message: "Group found successfully",
-//       data: group,
-//     };
-//   } catch (error) {
-//     logger.error("Error finding group by name:", {
-//       message: error.message,
-//       stack: error.stack,
-//     });
-//     throw new Error("Failed to find group by name");
-//   }
-// };
-
 export const getAllGroupsService = async (req) => {
   const { userid } = req.headers; // Current user ID
-  const { page = 1, limit = 10 } = req.query; // Default to page 1 and limit to 10
 
   if (!userid) {
     throw new Error("User ID is required");
   }
 
   try {
-    // Calculate the skip and take values for pagination
-    const skip = (page - 1) * limit; // Calculate the number of items to skip
-    const take = parseInt(limit, 10); // Limit number of items per page
-
-    // Fetch groups with pagination
+    // Fetch all groups where the user is a member
     const groups = await prisma.group.findMany({
-      skip: skip,
-      take: take,
       where: {
-        // Optional filter for groups the user is a member of (or other conditions)
         members: {
           some: {
             userId: userid,
@@ -166,33 +98,16 @@ export const getAllGroupsService = async (req) => {
           },
         }, // Include members in the response
       },
-    });
-
-    // Count the total number of groups to calculate the total pages
-    const totalGroups = await prisma.group.count({
-      where: {
-        members: {
-          some: {
-            userId: userid,
-          },
-        },
+      orderBy: {
+        lastActivity: "desc",
       },
     });
 
-    // Calculate the total number of pages
-    const totalPages = Math.ceil(totalGroups / limit);
-
-    // Return the paginated result
+    // Return the result without pagination
     return {
       success: true,
       message: "Groups fetched successfully",
-      data: groups,
-      pagination: {
-        currentPage: page,
-        totalPages: totalPages,
-        totalGroups: totalGroups,
-        limit: limit,
-      },
+      groups: groups,
     };
   } catch (error) {
     logger.error("Error fetching groups:", {
@@ -203,22 +118,31 @@ export const getAllGroupsService = async (req) => {
   }
 };
 
-// export const getGroupService = async (req) => {
+// with pagination
+// export const getAllGroupsService = async (req) => {
 //   const { userid } = req.headers; // Current user ID
-//   const { page = 1, limit = 10 } = req.query;
+//   const { page = 1, limit = 10 } = req.query; // Default to page 1 and limit to 10
+
+//   if (!userid) {
+//     throw new Error("User ID is required");
+//   }
 
 //   try {
 //     // Calculate the skip and take values for pagination
 //     const skip = (page - 1) * limit; // Calculate the number of items to skip
 //     const take = parseInt(limit, 10); // Limit number of items per page
-//     const { groupId } = req.body;
 
 //     // Fetch groups with pagination
-//     const group = await prisma.group.findMany({
+//     const groups = await prisma.group.findMany({
 //       skip: skip,
 //       take: take,
 //       where: {
-//         id: groupId
+//         // Optional filter for groups the user is a member of (or other conditions)
+//         members: {
+//           some: {
+//             userId: userid,
+//           },
+//         },
 //       },
 //       include: {
 //         members: {
@@ -228,6 +152,7 @@ export const getAllGroupsService = async (req) => {
 //                 id: true,
 //                 userName: true,
 //                 phone: true,
+//                 firebaseUserId: true,
 //               },
 //             },
 //           },
@@ -268,7 +193,71 @@ export const getAllGroupsService = async (req) => {
 //     });
 //     throw new Error("Failed to fetch groups");
 //   }
-// }
+// };
+
+export const getGroupMessageService = async (req) => {
+  const { userid } = req.headers;
+  const { groupId } = req.params;
+  const { messageId } = req.query; // Only keep messageId for conditional queries
+
+  const messagesQuery = {
+    orderBy: {
+      createdAt: "desc", // Order messages by creation date, most recent first
+    },
+    select: {
+      id: true,
+      content: true,
+      photoUrl: true,
+      fileUrls: true,
+      status: true,
+      createdAt: true,
+      conversationId: true,
+      sender: {
+        select: {
+          id: true,
+          userName: true,
+          phone: true,
+          profilePictureUrl: true,
+          firebaseUserId: true,
+        },
+      },
+    },
+  };
+
+  // Modify the query if messageId is provided
+  if (messageId) {
+    // Fetch messages from the given messageId onward
+    messagesQuery.where = {
+      id: {
+        gt: messageId,
+      },
+    };
+  }
+
+  const group = await prisma.group.findFirst({
+    where: {
+      id: groupId,
+      members: {
+        some: {
+          userId: userid,
+        },
+      },
+    },
+    include: {
+      messages: messagesQuery,
+      lastMessage: true,
+    },
+  });
+
+  if (!group) {
+    throw new Error(`Group not found or you are not a member.`);
+  }
+
+  return {
+    success: true,
+    group,
+  };
+};
 
 export const createGroupService = async (req) => {
   logger.info(`Group Create Process Started At ${new Date().toISOString()}`);
@@ -621,68 +610,3 @@ export const removeMemberFromGroupService = async (req) => {
     throw new Error(error.message);
   }
 };
-
-// export const createGroupService = async (req) => {
-//   logger.info(`Group Create Process Started At ${new Date().toISOString()}`);
-//   const { userid } = req.headers; // Current user ID
-//   const { name, description, isPublic, profilePictureUrl, memberIds } =
-//     req.body; // Group details and additional member IDs
-
-//   if (!userid) {
-//     throw new Error("User ID is required");
-//   }
-
-//   if (!name) {
-//     throw new Error("Group name is required");
-//   }
-
-//   try {
-//     // Prepare the members data for Prisma create operation
-//     const membersData =
-//       memberIds && Array.isArray(memberIds)
-//         ? memberIds.map((id) => ({ userId: id }))
-//         : [];
-
-//     // Include the creator as a member
-//     membersData.push({ userId: userid });
-
-//     // Create the new group in the database
-//     logger.info(`Group Create Query Started At ${new Date().toISOString()}`);
-
-//     const newGroup = await prisma.group.create({
-//       data: {
-//         name,
-//         description,
-//         isPublic: isPublic || false, // Defaults to false if not provided
-//         profilePictureUrl: profilePictureUrl || "example.profile.picture",
-//         createdById: userid,
-//         members: {
-//           create: membersData, // Add multiple members including the creator
-//         },
-//       },
-//       include: {
-//         members: true, // Include members in the response
-//       },
-//     });
-//     logger.info(`Group Create Query Finished At ${new Date().toISOString()}`);
-
-//     // Emit a "createGroupRoom" event to Socket.IO
-//     io.emit("createGroupRoom", {
-//       groupId: newGroup.id,
-//       memberIds,
-//     });
-
-//     // Return the created group details
-//     return {
-//       success: true,
-//       message: "Group created successfully",
-//       data: newGroup,
-//     };
-//   } catch (error) {
-//     logger.error("Error creating group:", {
-//       message: error.message,
-//       stack: error.stack,
-//     });
-//     throw new Error("Failed to create group");
-//   }
-// };

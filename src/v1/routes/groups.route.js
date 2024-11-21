@@ -6,6 +6,7 @@ import {
   createGroup,
   findGroupByName,
   getAllGroups,
+  getGroupMessages,
   joinGroup,
   leaveGroup,
   removeMember,
@@ -13,34 +14,33 @@ import {
 
 const router = Router();
 
-//Production
-
-// router.get("/", checkToken, getAllGroups); // get all groups
-// router.post("/", checkToken, createGroup); // create a new group
-// router.post("/join/:groupId", checkToken, joinGroup); // join members to the group
-// router.post("/leave/:groupId", checkToken, joinGroup); //leave members from the group
-// router.post("/add-members", checkToken, addMember); //add members to the group
-// router.post("/remove-members", checkToken, removeMember); //remove members from the group
-
-//Need to do
-// find a group by name
-//find a group by id
-//delete group
-
-//Development
+router.use(checkToken);
 
 router.get("/findGroupByName", findGroupByName);
 
+//get all groups by user id
 router.get("/", getAllGroups);
 
+//get group messages by group id
+router.get("/:groupId/get-group-messages", getGroupMessages);
+
+// create group
 router.post("/", createGroup);
 
+// join members to the group if group is public
 router.post("/join/:groupId", joinGroup);
 
+// leave members from the group
 router.post("/leave/:groupId", leaveGroup);
 
+// add members to the group if user is admin
 router.post("/add-members", addMember);
 
+// remove members from the group if user is admin
 router.post("/remove-members", removeMember);
+
+//todo
+//find a group by id
+//delete group
 
 export default router;

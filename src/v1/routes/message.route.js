@@ -15,8 +15,8 @@ const router = Router();
 // router.post("/", checkToken, sendMessage);
 
 // Send DM messages
-// router.post("/direct-message", checkToken, sendDmMessage);
-router.post("/direct-message", sendDmMessage);
+router.post("/direct-message", checkToken, sendDmMessage);
+// router.post("/direct-message", sendDmMessage);
 
 //Send Group messages
 router.post("/group-messages", checkToken, sendGroupMessage);
