@@ -5,17 +5,21 @@ import { isSuperAdmin } from "../middlewares/channels/superAdminMiddleware";
 
 import {
   addAdminToChannel,
+  addMemberToChannel,
   createChannel,
   deleteChannel,
   getAllChannels,
   getChannelMessagesByChannelId,
+  joinMemberToChannel,
+  leaveMemberFromChannel,
   removeAdminFromChannel,
+  removeMemberFromChannel,
   updateChannel,
 } from "../controllers/channel.controller";
 
 const router = Router();
 
-router.use(checkToken);
+// router.use(checkToken);
 
 // Get a channel Messages by channel ID, requires user to be authenticated and have admin rights.
 router.get("/:channelId/get-channel-messages", getChannelMessagesByChannelId);
@@ -38,8 +42,16 @@ router.post("/:channelId/remove-admin", isSuperAdmin, removeAdminFromChannel);
 // Delete a channel, requires user to be authenticated and have Super admin rights.
 router.delete("/:channelId", isSuperAdmin, deleteChannel);
 
-//todo list
 //add member -> only admin and super admins can access
-//remove momber -> only admin and super admins can access
+router.post("/add-members", addMemberToChannel);
+
+//remove member -> only admin and super admins can access
+router.post("/remove-members", removeMemberFromChannel);
+
+//join member
+router.post("/join-member", joinMemberToChannel);
+
+//leave member
+router.post("/leave-member", leaveMemberFromChannel);
 
 export default router;
