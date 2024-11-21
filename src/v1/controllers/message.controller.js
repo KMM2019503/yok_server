@@ -1,4 +1,6 @@
+import { response } from "express";
 import {
+  sendChannelMessageService,
   sendDmMessageService,
   sendGroupMessageService,
 } from "../services/message.services";
@@ -38,6 +40,19 @@ export const sendGroupMessage = async (req, res) => {
     res.status(201).json(response);
   } catch (error) {
     logger.error("Error occurred during Send Group Message:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const sendChannelMessage = async (req, res) => {
+  try {
+    const response = await sendChannelMessageService(req);
+    res.status(201).json(response);
+  } catch (error) {
+    logger.error("Error occurred during Send channel Message:", {
       message: error.message,
       stack: error.stack,
     });

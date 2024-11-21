@@ -2,10 +2,12 @@
 import { Router } from "express";
 import { checkToken } from "../middlewares/checkAuth";
 import {
+  sendChannelMessage,
   //   sendMessage,
   sendDmMessage,
   sendGroupMessage,
 } from "../controllers/message.controller";
+import { checkIsAdmin } from "../middlewares/channels/checkAdminMiddleware";
 
 const router = Router();
 
@@ -18,6 +20,10 @@ router.post("/direct-message", checkToken, sendDmMessage);
 
 //Send Group messages
 router.post("/group-messages", checkToken, sendGroupMessage);
+// router.post("/group-messages", sendGroupMessage);
+
+//Send Group messages
+router.post("/channel-messages", checkIsAdmin, sendChannelMessage);
 // router.post("/group-messages", sendGroupMessage);
 
 // router.post("/direct-message", sendDmMessage);

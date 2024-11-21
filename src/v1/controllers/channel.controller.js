@@ -4,9 +4,7 @@ import {
   createChannelService,
   deleteChannelService,
   getAllChannelsService,
-  getChannelMessages,
-  joinMemberToChannelService,
-  leaveMemberFromChannelService,
+  getChannelMessagesServices,
   removeAdminService,
   removeMemberFromChannelService,
   updateChannelService,
@@ -56,7 +54,7 @@ export const getAllChannels = async (req, res) => {
 export const getChannelMessagesByChannelId = async (req, res) => {
   try {
     console.log("getChannelById controller called");
-    const response = await getChannelMessages(req);
+    const response = await getChannelMessagesServices(req);
     res.status(200).json(response);
   } catch (error) {
     logger.error("Error occurred during user update:", {

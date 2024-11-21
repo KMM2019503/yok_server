@@ -22,7 +22,7 @@ const router = Router();
 // router.use(checkToken);
 
 // Get a channel Messages by channel ID, requires user to be authenticated and have admin rights.
-router.get("/get-channel-by-id/:channelId", getChannelMessagesByChannelId);
+router.get("/:channelId/get-channel-messages", getChannelMessagesByChannelId);
 
 // Get all channels, requires user to be authenticated.
 router.get("/", getAllChannels);
