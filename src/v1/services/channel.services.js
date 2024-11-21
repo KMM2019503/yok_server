@@ -159,62 +159,56 @@ export const getAllChannelsService = async (req) => {
 //   }
 // };
 
-export const getChannelMessages = async (req) => {
+export const getChannelMessagesServices = async (req) => {
   try {
+    const { userid } = req.headers;
     const { channelId } = req.params;
-    const { page = 1, size = 15 } = req.query; // Pagination parameters
-
-    // Calculate the offset for pagination
-    const skip = (page - 1) * size;
-    const take = Number(size);
-
-    console.log("running getChannelService");
-
-    const channel = await prisma.channel.findUnique({
-      where: { id: channelId },
-      include: {
-        messages: {
+    const { messageId } = req.query;
+    const messagesQuery = {
+      orderBy: {
+        createdAt: "desc", // Order messages by creation date, most recent first
+      },
+      select: {
+        id: true,
+        content: true,
+        photoUrl: true,
+        fileUrls: true,
+        status: true,
+        createdAt: true,
+        conversationId: true,
+        sender: {
           select: {
             id: true,
-            content: true,
-            photoUrl: true,
-            fileUrls: true,
-            createdAt: true,
-            sender: {
-              select: {
-                id: true,
-                userName: true,
-                profilePictureUrl: true,
-              },
-            },
-          },
-          skip: skip,
-          take: take,
-          orderBy: {
-            createdAt: "desc", // Order messages by creation date, most recent first
+            userName: true,
+            phone: true,
+            profilePictureUrl: true,
+            firebaseUserId: true,
           },
         },
       },
+    };
+
+    // Modify the query if messageId is provided
+    if (messageId) {
+      // Fetch messages from the given messageId onward
+      messagesQuery.where = {
+        id: {
+          gt: messageId,
+        },
+      };
+    }
+
+    const channel = await prisma.channel.findFirst({
+      where: { id: channelId, members: { some: { userId: userid } } },
+      include: {
+        messages: messagesQuery,
+        lastMessage: true,
+      },
     });
 
-    // Fetch total number of messages in the channel
-    const totalMessages = await prisma.message.count({
-      where: { channelId: channelId },
-    });
-
-    // Calculate total pages
-    const totalPages = Math.ceil(totalMessages / size);
-
-    // Return the channel with paginated message data and pagination info
     return {
       success: true,
       channel,
-      pagination: {
-        currentPage: page,
-        totalPages: totalPages,
-        pageSize: size,
-        totalMessages: totalMessages,
-      },
     };
   } catch (error) {
     logger.error("🚀 ~ getChannel ~ error:", error);
