@@ -15,7 +15,7 @@ import {
 
 const router = Router();
 
-router.use(checkToken);
+// router.use(checkToken);
 
 // Get a channel Messages by channel ID, requires user to be authenticated and have admin rights.
 router.get("/get-channel-by-id/:channelId", getChannelMessagesByChannelId);
@@ -40,6 +40,8 @@ router.delete("/:channelId", isSuperAdmin, deleteChannel);
 
 //todo list
 //add member -> only admin and super admins can access
-//remove momber -> only admin and super admins can access
+//remove member -> only admin and super admins can access
+//join member
+//leave member
 
 export default router;
