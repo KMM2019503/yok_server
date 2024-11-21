@@ -521,6 +521,9 @@ export const joinMemberToChannelService = async (req) => {
     const { userid } = req.headers; // ID of the current user
     const { channelId } = req.body; // ID of the channel to join
 
+    if (!userid) {
+      throw new Error("User ID is required");
+    }
     // Validate input
     if (!channelId) {
       throw new Error("Channel ID is required");
@@ -558,6 +561,77 @@ export const joinMemberToChannelService = async (req) => {
     };
   } catch (error) {
     logger.error("🚀 ~ joinMemberToChannelService ~ error:", error);
+    throw error;
+  }
+};
+
+export const leaveMemberFromChannelService = async (req) => {
+  try {
+    const { userid } = req.headers; // ID of the current user
+    const { channelId } = req.body; // ID of the channel to leave
+
+    if (!userid) {
+      throw new Error("User ID is required");
+    }
+
+    // Validate input
+    if (!channelId) {
+      throw new Error("Channel ID is required");
+    }
+
+    // Check if the member exists in the channel
+    const member = await prisma.channelMember.findUnique({
+      where: {
+        userId_channelId: {
+          userId: userid,
+          channelId: channelId,
+        },
+      },
+    });
+
+    if (!member) {
+      throw new Error("You are not a member of this channel");
+    }
+
+    // Remove the member from the channel
+    await prisma.channelMember.delete({
+      where: {
+        userId_channelId: {
+          userId: userid,
+          channelId: channelId,
+        },
+      },
+    });
+
+    // Remove the user from the channel's admin list if they are an admin
+    const channel = await prisma.channel.findUnique({
+      where: { id: channelId },
+      select: { adminIds: true },
+    });
+
+    if (channel && channel.adminIds.includes(userid)) {
+      const updatedAdminIds = channel.adminIds.filter((id) => id !== userid);
+
+      await prisma.channel.update({
+        where: { id: channelId },
+        data: {
+          adminIds: updatedAdminIds,
+        },
+      });
+
+      logger.info(
+        `User ${userid} was removed from admin list of channel ${channelId}`
+      );
+    }
+
+    logger.info(`User ${userid} successfully left channel ${channelId}`);
+
+    return {
+      success: true,
+      message: "Successfully left the channel",
+    };
+  } catch (error) {
+    logger.error("🚀 ~ leaveMemberFromChannelService ~ error:", error);
     throw error;
   }
 };

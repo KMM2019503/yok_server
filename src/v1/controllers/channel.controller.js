@@ -5,6 +5,8 @@ import {
   deleteChannelService,
   getAllChannelsService,
   getChannelMessages,
+  joinMemberToChannelService,
+  leaveMemberFromChannelService,
   removeAdminService,
   removeMemberFromChannelService,
   updateChannelService,
@@ -134,6 +136,36 @@ export const removeMemberFromChannel = async (req, res) => {
       .json({ message: "remove member successfully", data: response });
   } catch (error) {
     logger.error("Error occurred while removing members from the channel:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const joinMemberToChannel = async (req, res) => {
+  try {
+    const response = await joinMemberToChannelService(req);
+    res
+      .status(201)
+      .json({ message: "join member successfully", data: response });
+  } catch (error) {
+    logger.error("Error occurred while joining members to the channel:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const leaveMemberFromChannel = async (req, res) => {
+  try {
+    const response = await leaveMemberFromChannelService(req);
+    res
+      .status(201)
+      .json({ message: "leave member successfully", data: response });
+  } catch (error) {
+    logger.error("Error occurred while leaving members from the channel:", {
       message: error.message,
       stack: error.stack,
     });
