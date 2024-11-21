@@ -5,6 +5,8 @@ import {
   deleteChannelService,
   getAllChannelsService,
   getChannelMessagesServices,
+  joinMemberToChannelService,
+  leaveMemberFromChannelService,
   removeAdminService,
   removeMemberFromChannelService,
   updateChannelService,
