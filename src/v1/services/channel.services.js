@@ -85,6 +85,9 @@ export const getAllChannelsService = async (req) => {
     const { userid } = req.headers;
     const { isSuperAdmin, isAdmin } = req.params; // Removed pagination parameters
 
+    if (!userid) {
+      throw new Error("User ID is required");
+    }
     // Build the filter conditions
     const conditions = {
       members: { some: { userId: userid } },
@@ -106,7 +109,22 @@ export const getAllChannelsService = async (req) => {
       orderBy: {
         lastActivity: "desc",
       },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                userName: true,
+                phone: true,
+                firebaseUserId: true,
+              },
+            },
+          },
+        },
+      },
     });
+    console.log("🚀 ~ getAllChannelsService ~ channels:", channels);
 
     // Return the list of channels associated with the user
     return {
