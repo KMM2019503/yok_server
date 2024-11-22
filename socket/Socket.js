@@ -43,25 +43,43 @@ io.on("connection", (socket) => {
     logger.warn("User ID is undefined or invalid.");
   }
 
-  // Handle "reconnectUser" event
   socket.on("reconnectUser", async (data) => {
-    console.log("🚀 ~ socket.on ~ data:", data);
+    console.log("🚀 ~ socket.on ~ reconnect user:", data);
     const { userId } = data;
-    if (userId) {
-      try {
-        // Fetch user's groups from the database
-        const userGroups = await prisma.group.findMany({
+
+    if (!userId) return;
+
+    try {
+      // Fetch user's groups and channels from the database in parallel
+      const [userGroups, userChannels] = await Promise.all([
+        prisma.group.findMany({
           where: { members: { some: { userId } } },
           select: { id: true },
-        });
-        console.log("🚀 ~ socket.on ~ userGroups:", userGroups);
-        if (userGroups.length > 0) {
-          userGroups.forEach((group) => socket.join(group.id));
-        }
-        console.log("Finished");
-      } catch (error) {
-        logger.error("Error fetching user groups on reconnect:", error);
-      }
+        }),
+        prisma.channel.findMany({
+          where: { members: { some: { userId } } },
+          select: { id: true },
+        }),
+      ]);
+
+      console.log("🚀 ~ socket.on ~ userGroups:", userGroups);
+      console.log("🚀 ~ socket.on ~ userChannels:", userChannels);
+
+      // Use a Set to avoid duplicate socket joins
+      const uniqueIds = new Set();
+
+      userGroups.forEach(({ id }) => uniqueIds.add(id));
+      userChannels.forEach(({ id }) => uniqueIds.add(id));
+
+      // Join the socket to all unique group and channel IDs
+      uniqueIds.forEach((id) => socket.join(id));
+
+      console.log("Finished joining sockets");
+    } catch (error) {
+      logger.error(
+        "Error fetching user groups or channels on reconnect:",
+        error
+      );
     }
   });
 

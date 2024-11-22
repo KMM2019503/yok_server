@@ -5,6 +5,7 @@ import {
   updateChannelSchema,
 } from "../validation/channel.validation";
 import { ValidationError } from "../utils/validationErrors";
+import { getReceiverSocketId, io } from "../../../socket/Socket";
 
 const prisma = new PrismaClient();
 
@@ -24,6 +25,13 @@ export const createChannelService = async (req) => {
     // Destructure channel information from the body
     const { name, description, isPublic, profilePictureUrl, adminIds } = body;
 
+    const membersData =
+      adminIds && Array.isArray(adminIds)
+        ? adminIds.map((id) => ({ userId: id }))
+        : [];
+
+    membersData.push({ userId: userid });
+
     // Create a new channel with Prisma
     const newChannel = await prisma.channel.create({
       data: {
@@ -35,43 +43,41 @@ export const createChannelService = async (req) => {
         superAdminId: userid,
         adminIds: adminIds ?? [], // Use an empty array if no admin IDs are provided
         lastActivity: new Date(),
+        members: {
+          create: membersData, // Add multiple members including the creator
+        },
+      },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                userName: true,
+                phone: true,
+                firebaseUserId: true,
+              },
+            },
+          },
+        }, // Include members in the response
       },
     });
 
     logger.info(`Channel created successfully: ${newChannel.id}`);
 
-    const channelMembersData = [
-      {
-        userId: userid,
-        channelId: newChannel.id,
-        joinedAt: new Date(),
-      },
-    ];
-
-    // If adminIds are provided, add them as channel members
-    if (adminIds && adminIds.length > 0) {
-      adminIds.forEach((adminId) => {
-        channelMembersData.push({
-          userId: adminId,
-          channelId: newChannel.id,
-          joinedAt: new Date(),
-        });
-      });
-    }
-
-    // Add all members to the ChannelMember table
-    await prisma.channelMember.createMany({
-      data: channelMembersData,
+    newChannel.members.forEach((member) => {
+      const memberSocketId = getReceiverSocketId(member.userId);
+      if (memberSocketId) {
+        io.to(memberSocketId).emit("channelCreated", { name: newChannel.name });
+        io.sockets.sockets.get(memberSocketId).join(newChannel.id);
+      }
     });
 
-    // Fetch the channel with members information included
-    const channel = await prisma.channel.findUnique({
-      where: { id: newChannel.id },
-    });
+    io.to(newChannel.id).emit("newChannelCreated", newChannel);
 
     return {
       success: true,
-      channel,
+      channel: newChannel,
     };
   } catch (error) {
     // Handle any errors during the process
@@ -137,45 +143,6 @@ export const getAllChannelsService = async (req) => {
     throw error;
   }
 };
-
-//with pagination
-// export const getAllChannelsService = async (req) => {
-//   try {
-//     const { userid } = req.headers;
-//     const { page = 1, size = 15, isSuperAdmin, isAdmin } = req.params; // Default values for pagination
-
-//     // Calculate offset for pagination
-//     const skip = (page - 1) * size;
-
-//     // Build the filter conditions
-//     const conditions = {
-//       members: { some: { userId: userid } },
-//     };
-
-//     // If filtering by superAdmin, add the condition
-//     if (isSuperAdmin) {
-//       conditions.superAdminId = userid;
-//     }
-
-//     // If filtering by admin, add the condition
-//     if (isAdmin) {
-//       conditions.adminIds = { has: userid };
-//     }
-
-//     const channels = await prisma.channel.findMany({
-//       where: conditions,
-//       skip: skip, // Skip calculated number of records
-//       take: Number(size), // Limit number of records returned
-//     });
-
-//     // Return the paginated list of channels associated with the user
-//     return channels;
-//   } catch (error) {
-//     // Handle any errors during the process
-//     logger.error("🚀 ~ getAllChannelsService ~ error:", error);
-//     throw error;
-//   }
-// };
 
 export const getChannelMessagesServices = async (req) => {
   try {
