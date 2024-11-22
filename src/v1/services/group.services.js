@@ -211,7 +211,7 @@ export const getGroupMessageService = async (req) => {
       fileUrls: true,
       status: true,
       createdAt: true,
-      conversationId: true,
+      groupId: true,
       sender: {
         select: {
           id: true,

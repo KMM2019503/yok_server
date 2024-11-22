@@ -160,7 +160,7 @@ export const getChannelMessagesServices = async (req) => {
         fileUrls: true,
         status: true,
         createdAt: true,
-        conversationId: true,
+        channelId: true,
         sender: {
           select: {
             id: true,
