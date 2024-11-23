@@ -5,6 +5,8 @@ import {
   deleteChannelService,
   getAllChannelsService,
   getChannelMessagesServices,
+  getChannelService,
+  getLatestMessagesInChannelsService,
   joinMemberToChannelService,
   leaveMemberFromChannelService,
   removeAdminService,
@@ -55,11 +57,10 @@ export const getAllChannels = async (req, res) => {
 
 export const getChannelMessagesByChannelId = async (req, res) => {
   try {
-    console.log("getChannelById controller called");
     const response = await getChannelMessagesServices(req);
     res.status(200).json(response);
   } catch (error) {
-    logger.error("Error occurred during user update:", {
+    logger.error("Error occurred during get Messages by channel id:", {
       message: error.message,
       stack: error.stack,
     });
@@ -166,6 +167,32 @@ export const leaveMemberFromChannel = async (req, res) => {
       .json({ message: "leave member successfully", data: response });
   } catch (error) {
     logger.error("Error occurred while leaving members from the channel:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getChannel = async (req, res) => {
+  try {
+    const response = await getChannelService(req);
+    res.status(201).json(response);
+  } catch (error) {
+    logger.error("Error occurred in get chnnel:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getLatestMessagesInChannel = async (req, res) => {
+  try {
+    const response = await getLatestMessagesInChannelsService(req);
+    res.status(200).json(response);
+  } catch (error) {
+    logger.error("Error occurred during fetch latest message In channels:", {
       message: error.message,
       stack: error.stack,
     });

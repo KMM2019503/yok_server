@@ -9,7 +9,9 @@ import {
   createChannel,
   deleteChannel,
   getAllChannels,
+  getChannel,
   getChannelMessagesByChannelId,
+  getLatestMessagesInChannel,
   joinMemberToChannel,
   leaveMemberFromChannel,
   removeAdminFromChannel,
@@ -19,10 +21,12 @@ import {
 
 const router = Router();
 
-// router.use(checkToken);
+router.use(checkToken);
+
+router.get("/:channelId", getChannel);
 
 // Get a channel Messages by channel ID, requires user to be authenticated and have admin rights.
-router.get("/:channelId/get-channel-messages", getChannelMessagesByChannelId);
+router.get("/:channelId/messages", getChannelMessagesByChannelId);
 
 // Get all channels, requires user to be authenticated.
 router.get("/", getAllChannels);
@@ -53,5 +57,7 @@ router.post("/join-member", joinMemberToChannel);
 
 //leave member
 router.post("/leave-member", leaveMemberFromChannel);
+
+router.get("/initial-channels/fetch-message", getLatestMessagesInChannel);
 
 export default router;

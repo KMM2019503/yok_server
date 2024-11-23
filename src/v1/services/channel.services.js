@@ -148,11 +148,12 @@ export const getChannelMessagesServices = async (req) => {
   try {
     const { userid } = req.headers;
     const { channelId } = req.params;
-    const { messageId } = req.query;
+    const { messageId, take } = req.query;
     const messagesQuery = {
       orderBy: {
-        createdAt: "desc", // Order messages by creation date, most recent first
+        createdAt: "desc",
       },
+      take: parseInt(take) || 25,
       select: {
         id: true,
         content: true,
@@ -173,21 +174,28 @@ export const getChannelMessagesServices = async (req) => {
       },
     };
 
-    // Modify the query if messageId is provided
     if (messageId) {
-      // Fetch messages from the given messageId onward
       messagesQuery.where = {
+        channelId,
         id: {
-          gt: messageId,
+          lt: messageId,
         },
       };
+    } else {
+      messagesQuery.where = { channelId };
     }
 
-    const channel = await prisma.channel.findFirst({
-      where: { id: channelId, members: { some: { userId: userid } } },
+    const channel = await prisma.channel.findUnique({
+      where: {
+        id: channelId,
+        members: {
+          some: { userId: userid },
+        },
+      },
       include: {
         messages: messagesQuery,
         lastMessage: true,
+        pinnedItems: true,
       },
     });
 
@@ -650,6 +658,130 @@ export const leaveMemberFromChannelService = async (req) => {
     };
   } catch (error) {
     logger.error("🚀 ~ leaveMemberFromChannelService ~ error:", error);
+    throw error;
+  }
+};
+
+export const getChannelService = async (req) => {
+  try {
+    const { userid } = req.headers;
+
+    logger.debug(req.headers);
+
+    if (!userid) {
+      throw new Error("User Id not found");
+    }
+
+    const channel = await prisma.channel.findFirst({
+      where: {
+        members: {
+          some: {
+            userId: userid,
+          },
+        },
+      },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                userName: true,
+                phone: true,
+                profilePictureUrl: true,
+                firebaseUserId: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      success: true,
+      channel,
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getLatestMessagesInChannelsService = async (req) => {
+  try {
+    const { userid } = req.headers;
+    let { take } = req.query;
+
+    if (!userid) {
+      throw new Error("User Id not found");
+    }
+
+    if (take <= 0) {
+      throw new Error(
+        "Invalid 'take' parameter. It must be a positive number."
+      );
+    }
+
+    take = parseInt(take) || 10;
+
+    const channels = await prisma.channel.findMany({
+      where: {
+        members: {
+          some: {
+            userId: userid,
+          },
+        },
+      },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                userName: true,
+                phone: true,
+                profilePictureUrl: true,
+                firebaseUserId: true,
+              },
+            },
+          },
+        },
+        messages: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take,
+          select: {
+            id: true,
+            content: true,
+            photoUrl: true,
+            fileUrls: true,
+            status: true,
+            createdAt: true,
+            channel: true,
+            sender: {
+              select: {
+                id: true,
+                userName: true,
+                phone: true,
+                profilePictureUrl: true,
+                firebaseUserId: true,
+              },
+            },
+          },
+        },
+        lastMessage: true,
+        pinnedItems: true,
+      },
+      orderBy: {
+        lastActivity: "desc",
+      },
+    });
+
+    return {
+      success: true,
+      channels,
+    };
+  } catch (error) {
     throw error;
   }
 };
