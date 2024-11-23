@@ -9,14 +9,14 @@ import {
 
 const router = Router();
 
-router.use(checkToken);
+// router.use(checkToken);
 
 // Get all conversations for the authenticated user with pagination
 router.get("/", getAllConversations);
 
 //New Route for initail fetch
 router.get(
-  "/initial-conversations/fetch-messages",
+  "/initial-conversation/fetch-message",
   getLatestMessagesInConversations
 );
 
