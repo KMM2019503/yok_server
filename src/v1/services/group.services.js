@@ -4,9 +4,6 @@ import { getReceiverSocketId, io } from "../../../socket/Socket";
 
 const prisma = new PrismaClient();
 
-// MongoDB URI (Ensure it's correct for your setup)
-const uri = process.env.DATABASE_URL; // Set this in your .env file for MongoDB URI
-
 export const findGroupByNameService = async (req) => {
   const { groupName } = req.query;
   const { userid } = req.headers; // Current user ID
@@ -118,92 +115,15 @@ export const getAllGroupsService = async (req) => {
   }
 };
 
-// with pagination
-// export const getAllGroupsService = async (req) => {
-//   const { userid } = req.headers; // Current user ID
-//   const { page = 1, limit = 10 } = req.query; // Default to page 1 and limit to 10
-
-//   if (!userid) {
-//     throw new Error("User ID is required");
-//   }
-
-//   try {
-//     // Calculate the skip and take values for pagination
-//     const skip = (page - 1) * limit; // Calculate the number of items to skip
-//     const take = parseInt(limit, 10); // Limit number of items per page
-
-//     // Fetch groups with pagination
-//     const groups = await prisma.group.findMany({
-//       skip: skip,
-//       take: take,
-//       where: {
-//         // Optional filter for groups the user is a member of (or other conditions)
-//         members: {
-//           some: {
-//             userId: userid,
-//           },
-//         },
-//       },
-//       include: {
-//         members: {
-//           include: {
-//             user: {
-//               select: {
-//                 id: true,
-//                 userName: true,
-//                 phone: true,
-//                 firebaseUserId: true,
-//               },
-//             },
-//           },
-//         }, // Include members in the response
-//       },
-//     });
-
-//     // Count the total number of groups to calculate the total pages
-//     const totalGroups = await prisma.group.count({
-//       where: {
-//         members: {
-//           some: {
-//             userId: userid,
-//           },
-//         },
-//       },
-//     });
-
-//     // Calculate the total number of pages
-//     const totalPages = Math.ceil(totalGroups / limit);
-
-//     // Return the paginated result
-//     return {
-//       success: true,
-//       message: "Groups fetched successfully",
-//       data: groups,
-//       pagination: {
-//         currentPage: page,
-//         totalPages: totalPages,
-//         totalGroups: totalGroups,
-//         limit: limit,
-//       },
-//     };
-//   } catch (error) {
-//     logger.error("Error fetching groups:", {
-//       message: error.message,
-//       stack: error.stack,
-//     });
-//     throw new Error("Failed to fetch groups");
-//   }
-// };
-
 export const getGroupMessageService = async (req) => {
   const { userid } = req.headers;
   const { groupId } = req.params;
-  const { messageId } = req.query; // Only keep messageId for conditional queries
-
+  const { messageId, take } = req.query;
   const messagesQuery = {
     orderBy: {
-      createdAt: "desc", // Order messages by creation date, most recent first
+      createdAt: "desc",
     },
+    take: parseInt(take) || 25,
     select: {
       id: true,
       content: true,
@@ -224,17 +144,18 @@ export const getGroupMessageService = async (req) => {
     },
   };
 
-  // Modify the query if messageId is provided
   if (messageId) {
-    // Fetch messages from the given messageId onward
     messagesQuery.where = {
+      groupId,
       id: {
-        gt: messageId,
+        lt: messageId,
       },
     };
+  } else {
+    messagesQuery.where = { channelId };
   }
 
-  const group = await prisma.group.findFirst({
+  const group = await prisma.group.findUnique({
     where: {
       id: groupId,
       members: {
@@ -246,6 +167,7 @@ export const getGroupMessageService = async (req) => {
     include: {
       messages: messagesQuery,
       lastMessage: true,
+      pinnedItems: true,
     },
   });
 
@@ -610,3 +532,207 @@ export const removeMemberFromGroupService = async (req) => {
     throw new Error(error.message);
   }
 };
+
+export const getGroupService = async (req) => {
+  try {
+    const { userid } = req.headers;
+
+    logger.debug(req.headers);
+
+    if (!userid) {
+      throw new Error("User Id not found");
+    }
+
+    // Fetch conversations where the user is a member, with pagination
+    const group = await prisma.group.findFirst({
+      where: {
+        members: {
+          some: {
+            userId: userid,
+          },
+        },
+      },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                userName: true,
+                phone: true,
+                profilePictureUrl: true,
+                firebaseUserId: true,
+              },
+            },
+          },
+        },
+        lastMessage: true,
+        pinnedItems: true,
+      },
+    });
+
+    return {
+      success: true,
+      group,
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getLatestMessagesInGroupsService = async (req) => {
+  try {
+    const { userid } = req.headers;
+    let { take } = req.query;
+
+    if (!userid) {
+      throw new Error("User Id not found");
+    }
+
+    if (take <= 0) {
+      throw new Error(
+        "Invalid 'take' parameter. It must be a positive number."
+      );
+    }
+
+    take = parseInt(take) || 10;
+
+    const groups = await prisma.group.findMany({
+      where: {
+        members: {
+          some: {
+            userId: userid,
+          },
+        },
+      },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                userName: true,
+                phone: true,
+                profilePictureUrl: true,
+                firebaseUserId: true,
+              },
+            },
+          },
+        },
+        messages: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take,
+          select: {
+            id: true,
+            content: true,
+            photoUrl: true,
+            fileUrls: true,
+            status: true,
+            createdAt: true,
+            groupId: true,
+            sender: {
+              select: {
+                id: true,
+                userName: true,
+                phone: true,
+                profilePictureUrl: true,
+                firebaseUserId: true,
+              },
+            },
+          },
+        },
+        lastMessage: true,
+        pinnedItems: true,
+      },
+      orderBy: {
+        lastActivity: "desc",
+      },
+    });
+
+    return {
+      success: true,
+      groups,
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
+// with pagination
+// export const getAllGroupsService = async (req) => {
+//   const { userid } = req.headers; // Current user ID
+//   const { page = 1, limit = 10 } = req.query; // Default to page 1 and limit to 10
+
+//   if (!userid) {
+//     throw new Error("User ID is required");
+//   }
+
+//   try {
+//     // Calculate the skip and take values for pagination
+//     const skip = (page - 1) * limit; // Calculate the number of items to skip
+//     const take = parseInt(limit, 10); // Limit number of items per page
+
+//     // Fetch groups with pagination
+//     const groups = await prisma.group.findMany({
+//       skip: skip,
+//       take: take,
+//       where: {
+//         // Optional filter for groups the user is a member of (or other conditions)
+//         members: {
+//           some: {
+//             userId: userid,
+//           },
+//         },
+//       },
+//       include: {
+//         members: {
+//           include: {
+//             user: {
+//               select: {
+//                 id: true,
+//                 userName: true,
+//                 phone: true,
+//                 firebaseUserId: true,
+//               },
+//             },
+//           },
+//         }, // Include members in the response
+//       },
+//     });
+
+//     // Count the total number of groups to calculate the total pages
+//     const totalGroups = await prisma.group.count({
+//       where: {
+//         members: {
+//           some: {
+//             userId: userid,
+//           },
+//         },
+//       },
+//     });
+
+//     // Calculate the total number of pages
+//     const totalPages = Math.ceil(totalGroups / limit);
+
+//     // Return the paginated result
+//     return {
+//       success: true,
+//       message: "Groups fetched successfully",
+//       data: groups,
+//       pagination: {
+//         currentPage: page,
+//         totalPages: totalPages,
+//         totalGroups: totalGroups,
+//         limit: limit,
+//       },
+//     };
+//   } catch (error) {
+//     logger.error("Error fetching groups:", {
+//       message: error.message,
+//       stack: error.stack,
+//     });
+//     throw new Error("Failed to fetch groups");
+//   }
+// };

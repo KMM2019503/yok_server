@@ -2,6 +2,7 @@ import {
   getAllConversationsService,
   getConversationMessagesService,
   getConversationService,
+  getLatestMessagesInConversationsService,
 } from "../services/conversation.services.js";
 import logger from "../utils/logger.js";
 
@@ -40,6 +41,22 @@ export const getConversation = async (req, res) => {
       message: error.message,
       stack: error.stack,
     });
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getLatestMessagesInConversations = async (req, res) => {
+  try {
+    const response = await getLatestMessagesInConversationsService(req);
+    res.status(200).json(response);
+  } catch (error) {
+    logger.error(
+      "Error occurred during fetch latest message In conversation:",
+      {
+        message: error.message,
+        stack: error.stack,
+      }
+    );
     res.status(500).json({ error: error.message });
   }
 };

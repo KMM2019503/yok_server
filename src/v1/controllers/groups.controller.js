@@ -4,6 +4,8 @@ import {
   findGroupByNameService,
   getAllGroupsService,
   getGroupMessageService,
+  getGroupService,
+  getLatestMessagesInGroupsService,
   joinGroupService,
   leaveGroupService,
   removeMemberFromGroupService,
@@ -111,5 +113,31 @@ export const removeMember = async (req, res) => {
       stack: error.stack,
     });
     res.status(500).json({ error: error.message, success: false });
+  }
+};
+
+export const getGroup = async (req, res) => {
+  try {
+    const response = await getGroupService(req);
+    res.status(200).json(response);
+  } catch (error) {
+    logger.error("Error occurred in get group:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: error.message, success: false });
+  }
+};
+
+export const getLatestMessagesInGroup = async (req, res) => {
+  try {
+    const response = await getLatestMessagesInGroupsService(req);
+    res.status(200).json(response);
+  } catch (error) {
+    logger.error("Error occurred during fetch latest message In groups:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: error.message });
   }
 };
