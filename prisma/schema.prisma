@@ -90,8 +90,12 @@ model GroupMember {
 
 enum MessageStatus {
   SENT
-  DELIVERED
   READ
+}
+
+type SeenStatus {
+  status      MessageStatus @default(SENT)
+  seenUserIds String[]      @db.ObjectId
 }
 
 model Message {
@@ -101,7 +105,7 @@ model Message {
   content        String
   photoUrl       String[]
   fileUrls       String[]
-  status         MessageStatus @default(SENT)
+  status         SeenStatus
   conversation   Conversation? @relation(fields: [conversationId], references: [id])
   conversationId String?       @db.ObjectId
   channel        Channel?      @relation(fields: [channelId], references: [id])
