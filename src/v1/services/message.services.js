@@ -36,7 +36,10 @@ export const sendDmMessageService = async (req) => {
             conversationId: conversation.id,
             photoUrl: photoUrl || [],
             fileUrls: fileUrls || [],
-            status: "SENT",
+            status: {
+              status: "SENT", // Enum value from MessageStatus
+              seenUserIds: [], // Initialize as an empty array
+            },
           },
           select: {
             id: true,

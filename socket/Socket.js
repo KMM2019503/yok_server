@@ -43,64 +43,41 @@ io.on("connection", (socket) => {
     logger.warn("User ID is undefined or invalid.");
   }
 
-  socket.on("reconnectUser", async (data) => {
-    console.log("🚀 ~ socket.on ~ reconnect user:", data);
-    const { userId } = data;
-
-    if (!userId) return;
-
+  socket.on("markMessageAsRead", async ({ messageId, userId }) => {
     try {
-      // Fetch user's groups and channels from the database in parallel
-      const [userGroups, userChannels] = await Promise.all([
-        prisma.group.findMany({
-          where: { members: { some: { userId } } },
-          select: { id: true },
-        }),
-        prisma.channel.findMany({
-          where: { members: { some: { userId } } },
-          select: { id: true },
-        }),
-      ]);
-
-      console.log("🚀 ~ socket.on ~ userGroups:", userGroups);
-      console.log("🚀 ~ socket.on ~ userChannels:", userChannels);
-
-      // Use a Set to avoid duplicate socket joins
-      const uniqueIds = new Set();
-
-      userGroups.forEach(({ id }) => uniqueIds.add(id));
-      userChannels.forEach(({ id }) => uniqueIds.add(id));
-
-      // Join the socket to all unique group and channel IDs
-      uniqueIds.forEach((id) => socket.join(id));
-
-      console.log("Finished joining sockets");
-    } catch (error) {
-      logger.error(
-        "Error fetching user groups or channels on reconnect:",
-        error
+      console.log(
+        `Message status updating process started at ${new Date(
+          Date.now()
+        ).toISOString()}`
       );
-    }
-  });
 
-  // Listen for the "markMessageAsRead" event
-  socket.on("markMessageAsRead", async (messageId) => {
-    try {
-      // Update the message status to 'READ'
-      const updatedMessage = await prisma.message.update({
-        where: { id: messageId },
-        data: { status: "READ" },
+      const updatedMessage = await prisma.$runCommandRaw({
+        findAndModify: "messages",
+        query: { _id: { $oid: messageId } },
+        update: {
+          $addToSet: { "status.seenUserIds": userId },
+          $set: { "status.status": "READ" },
+        },
+        new: true,
       });
 
-      // Notify the receiver if they are online
-      const senderScoketId = getReceiverSocketId(updatedMessage.senderId);
+      console.log(
+        `Message status updating process ended at ${new Date(
+          Date.now()
+        ).toISOString()}`
+      );
 
-      // check if the sender is online
-      if (senderScoketId) {
-        io.to(senderScoketId).emit("messageStatusUpdated", updatedMessage);
+      if (updatedMessage.ok === 1) {
+        const senderScoketId = getReceiverSocketId(
+          updatedMessage.value.senderId.$oid
+        );
+        if (senderScoketId) {
+          io.to(senderScoketId).emit(
+            "messageStatusUpdated",
+            updatedMessage.value
+          );
+        }
       }
-
-      console.log("sender is offline");
     } catch (error) {
       logger.error("Error updating message status via WebSocket:", error);
     }
