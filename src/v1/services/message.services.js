@@ -1,11 +1,9 @@
 // message.services.js
-import { PrismaClient } from "@prisma/client";
 import logger from "../utils/logger";
 import { getReceiverSocketId, io } from "../../../socket/Socket";
 import { retryWithBackoff } from "../utils/helper";
 import { sendNotification } from "../utils/notifications/noti";
-
-const prisma = new PrismaClient();
+import prisma from "../../../prisma/prismaClient";
 
 export const sendDmMessageService = async (req) => {
   const { userid } = req.headers;

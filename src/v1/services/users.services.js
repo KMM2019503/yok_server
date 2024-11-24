@@ -1,9 +1,9 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "../../../prisma/prismaClient";
+
 import logger from "../utils/logger";
 import { removeSpacingOnPhoneNumber } from "../utils/helper";
 import { ErrorCodes } from "../utils/error/error_codes";
 import { AppError } from "../utils/error/app_error";
-const prisma = new PrismaClient();
 
 export const updateUserService = async (req) => {
   try {

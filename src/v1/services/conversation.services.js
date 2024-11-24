@@ -1,9 +1,10 @@
 //conversation.services.js
 
-import { PrismaClient } from "@prisma/client";
+// import { PrismaClient } from "@prisma/client";
+import prisma from "../../../prisma/prismaClient";
 import logger from "../utils/logger";
 
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
 
 export const getAllConversationsService = async (req) => {
   try {

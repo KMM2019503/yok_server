@@ -1,8 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "../../../prisma/prismaClient";
+
 import logger from "../utils/logger";
 import { getReceiverSocketId, io } from "../../../socket/Socket";
-
-const prisma = new PrismaClient();
 
 export const findGroupByNameService = async (req) => {
   const { groupName } = req.query;

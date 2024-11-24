@@ -9,6 +9,7 @@ import routes from "./v1/routes"; // Import your routes
 import applyMiddlewares from "./v1/middlewares";
 import cookieParser from "cookie-parser";
 import { app, server } from "../socket/Socket.js";
+import prisma, { connectToDatabase } from "../prisma/prismaClient.js";
 
 dotenv.config(); // Load environment variables
 
@@ -19,7 +20,12 @@ if (isNaN(port)) {
   process.exit(1); // Exit if port is invalid
 }
 
-const startServer = () => {
+const startServer = async() => {
+
+  // Handshake with the database
+  await connectToDatabase();
+
+
   app.use(express.json());
   app.use(cookieParser());
 
@@ -49,8 +55,9 @@ const startServer = () => {
   });
 
   // Handle graceful shutdown
-  process.on("SIGINT", () => {
+  process.on("SIGINT",async () => {
     logger.info("Received SIGINT. Shutting down gracefully...");
+    await prisma.$disconnect();
     server.close(() => {
       logger.info("Server shut down.");
       process.exit(0);

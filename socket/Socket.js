@@ -2,12 +2,11 @@ import { Server } from "socket.io";
 import http from "http";
 import express from "express";
 import logger from "../src/v1/utils/logger";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../prisma/prismaClient";
 import { checkToken } from "../src/v1/middlewares/checkAuth"; // Import the checkAuth middleware
 
 const app = express();
 const server = http.createServer(app);
-const prisma = new PrismaClient();
 const onlineUsers = {}; // Object to store online users
 
 // Function to get receiver socket ID
