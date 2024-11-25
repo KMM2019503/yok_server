@@ -269,7 +269,10 @@ export const sendGroupMessageService = async (req) => {
           groupId,
           photoUrl: photoUrl || [],
           fileUrls: fileUrls || [],
-          status: "SENT",
+          status: {
+            status: "SENT", // Enum value from MessageStatus
+            seenUserIds: [], // Initialize as an empty array
+          },
         },
         select: {
           id: true,
@@ -395,7 +398,10 @@ export const sendChannelMessageService = async (req) => {
           channelId,
           photoUrl: photoUrl || [],
           fileUrls: fileUrls || [],
-          status: "SENT",
+          status: {
+            status: "SENT",
+            seenUserIds: [],
+          },
         },
         select: {
           id: true,
