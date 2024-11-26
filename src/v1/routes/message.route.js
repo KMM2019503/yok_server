@@ -11,7 +11,7 @@ import { checkIsAdmin } from "../middlewares/channels/checkAdminMiddleware";
 
 const router = Router();
 
-router.use(checkToken);
+// router.use(checkToken);
 
 // Send DM messages
 router.post("/direct-message", sendDmMessage);

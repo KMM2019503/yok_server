@@ -101,21 +101,21 @@ export const sendDmMessageService = async (req) => {
         // Emit message to receiver
         const emitReturn = await emitNewMessage(receiverId, message);
 
-        if (!emitReturn) {
-          // Handle offline user notifications
-          const receiver = conversation.members.find(
-            (m) => m.user.id === receiverId
-          );
-          if (receiver) {
-            const payload = {
-              title: `New Message from ${message.sender.userName}`,
-              body: truncatedContent,
-              icon: message.sender.profilePictureUrl,
-              data: { sender: message.sender.userName },
-            };
-            await sendNotification([receiver.user.firebaseUserId], payload);
-          }
-        }
+        // if (!emitReturn) {
+        //   // Handle offline user notifications
+        //   const receiver = conversation.members.find(
+        //     (m) => m.user.id === receiverId
+        //   );
+        //   if (receiver) {
+        //     const payload = {
+        //       title: `New Message from ${message.sender.userName}`,
+        //       body: truncatedContent,
+        //       icon: message.sender.profilePictureUrl,
+        //       data: { sender: message.sender.userName },
+        //     };
+        //     await sendNotification([receiver.user.firebaseUserId], payload);
+        //   }
+        // }
       } catch (error) {
         logger.error("Error in post-message processing tasks:", {
           message: error.message,

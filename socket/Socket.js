@@ -82,43 +82,86 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("markMessageAsRead", async ({ messageId, userId }) => {
+  socket.on("markMessagesAsRead", async ({ messageIds, userId, groupId }) => {
     try {
+      const startTime = Date.now();
       console.log(
         `Message status updating process started at ${new Date(
-          Date.now()
+          startTime
         ).toISOString()}`
       );
 
-      const updatedMessage = await prisma.$runCommandRaw({
-        findAndModify: "messages",
-        query: { _id: { $oid: messageId } },
-        update: {
-          $addToSet: { "status.seenUserIds": userId },
-          $set: { "status.status": "READ" },
+      if (!Array.isArray(messageIds) || messageIds.length === 0) {
+        throw new Error("Invalid or missing message IDs.");
+      }
+
+      const messages = await prisma.message.findMany({
+        where: { id: { in: messageIds } },
+        select: {
+          id: true,
+          status: true,
         },
-        new: true,
       });
 
+      const messagesToUpdate = messages.filter(
+        ({ status }) => !status.seenUserIds.includes(userId)
+      );
+
+      if (messagesToUpdate.length === 0) {
+        console.log(
+          "No messages need updating. User is already in seenUser Ids."
+        );
+        return;
+      }
+
+      const messageIdsToUpdate = messagesToUpdate.map(({ id }) => id);
+
+      const updatedMessagesCount = await prisma.message.updateMany({
+        where: { id: { in: messageIdsToUpdate } },
+        data: {
+          status: {
+            update: {
+              seenUserIds: { push: userId },
+              status: "READ",
+            },
+          },
+        },
+      });
+
+      console.log("🚀 ~ updatedMessagesCount:", updatedMessagesCount);
+
+      const updatedMessages = await prisma.message.findMany({
+        where: { id: { in: messageIdsToUpdate } },
+        include: { status: true },
+      });
+
+      console.log("🚀 ~ updatedMessages:", updatedMessages);
       console.log(
         `Message status updating process ended at ${new Date(
           Date.now()
         ).toISOString()}`
       );
 
-      if (updatedMessage.ok === 1) {
-        const senderScoketId = getReceiverSocketId(
-          updatedMessage.value.senderId.$oid
-        );
-        if (senderScoketId) {
-          io.to(senderScoketId).emit(
-            "messageStatusUpdated",
-            updatedMessage.value
+      if (updatedMessages.length > 0) {
+        if (groupId) {
+          io.to(groupId).emit("groupMessagesStatusUpdated", updatedMessages);
+        } else {
+          const senderSocketId = getReceiverSocketId(
+            updatedMessages[0].senderId
           );
+          if (senderSocketId) {
+            io.to(senderSocketId).emit(
+              "messagesStatusUpdated",
+              updatedMessages
+            );
+          }
         }
       }
     } catch (error) {
-      logger.error("Error updating message status via WebSocket:", error);
+      logger.error("Error updating message status via WebSocket:", {
+        message: error.message,
+        stack: error.stack,
+      });
     }
   });
 
@@ -127,10 +170,9 @@ io.on("connection", (socket) => {
     logger.info(`User disconnected process started at: ${socket.id}`);
 
     if (userId && onlineUsers[userId]) {
-      delete onlineUsers[userId]; // Remove the user from the online users list
+      delete onlineUsers[userId];
 
       try {
-        // Update user status to OFFLINE and lastActiveAt to the current timestamp
         await prisma.user.update({
           where: { id: userId },
           data: {
@@ -147,39 +189,4 @@ io.on("connection", (socket) => {
   });
 });
 
-// Export app and server for use in other modules
 export { app, server, io, getReceiverSocketId };
-
-// Listen for "createGroupRoom" event emitted after group creation
-// socket.on("createGroupRoom", ({ groupId, memberIds }) => {
-//   const roomName = `group_${groupId}`; // Room name for the group
-
-//   console.log("🚀 ~ socket.on ~ roomName:", roomName);
-
-//   // Add all members to the group room
-//   memberIds.forEach((memberId) => {
-//     const memberSocketId = getReceiverSocketId(memberId);
-//     console.log("🚀 ~ memberIds.forEach ~ memberSocketId:", memberSocketId);
-
-//     if (memberSocketId) {
-//       io.sockets.sockets.get(memberSocketId)?.join(roomName);
-//       io.to(memberSocketId).emit("joinGroupRoomNoti", {
-//         roomName,
-//         groupId,
-//       });
-//     }
-//   });
-
-//   socket.emit("joinGroupRoomNoti", {
-//     roomName,
-//     groupId,
-//   });
-
-//   // Notify all members in the room about the new group
-//   io.to(roomName).emit("groupCreated", {
-//     groupId,
-//     message: "A new group has been created.",
-//   });
-
-//   logger.info(`Room ${roomName} created and members notified.`);
-// });
