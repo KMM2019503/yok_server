@@ -165,6 +165,115 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on(
+    "initialMarkMessagesAsRead",
+    async ({ conversationId, userId, groupId }) => {
+      console.log("🚀 ~ userId:", userId);
+      try {
+        const startTime = Date.now();
+        console.log(
+          `Message status updating process started at ${new Date(
+            startTime
+          ).toISOString()}`
+        );
+
+        // Validate input
+        if (!userId) {
+          throw new Error("Invalid or missing userId.");
+        }
+
+        // Fetch messages based on groupId or conversationId
+        let messages;
+        if (groupId) {
+          // Fetch messages for the given group
+          messages = await prisma.message.findMany({
+            where: { groupId: conversationId },
+            select: {
+              id: true,
+              status: true,
+            },
+          });
+        } else {
+          // Fetch messages for the given conversation
+          messages = await prisma.message.findMany({
+            where: { conversationId: conversationId },
+            select: {
+              id: true,
+              status: true,
+            },
+          });
+        }
+
+        // Filter out messages where the user has already marked them as read
+        const messagesToUpdate = messages.filter(
+          ({ status }) => !status.seenUserIds.includes(userId)
+        );
+
+        if (messagesToUpdate.length === 0) {
+          console.log(
+            "No messages need updating. User is already in seenUserIds."
+          );
+          return;
+        }
+
+        const messageIdsToUpdate = messagesToUpdate.map(({ id }) => id);
+
+        // Update messages' status
+        const updatedMessagesCount = await prisma.message.updateMany({
+          where: { id: { in: messageIdsToUpdate } },
+          data: {
+            status: {
+              update: {
+                seenUserIds: { push: userId },
+                status: "READ",
+              },
+            },
+          },
+        });
+
+        console.log("🚀 ~ updatedMessagesCount:", updatedMessagesCount);
+
+        // Retrieve the updated messages
+        const updatedMessages = await prisma.message.findMany({
+          where: { id: { in: messageIdsToUpdate } },
+          include: { status: true },
+        });
+
+        console.log("🚀 ~ updatedMessages:", updatedMessages);
+        console.log(
+          `Message status updating process ended at ${new Date(
+            Date.now()
+          ).toISOString()}`
+        );
+
+        // Emit the updated messages to the appropriate socket
+        if (updatedMessages.length > 0) {
+          if (groupId) {
+            io.to(groupId).emit(
+              "initialGroupMessagesStatusUpdated",
+              updatedMessages
+            );
+          } else {
+            const senderSocketId = getReceiverSocketId(
+              updatedMessages[0].senderId
+            );
+            if (senderSocketId) {
+              io.to(senderSocketId).emit(
+                "initialMessagesStatusUpdated",
+                updatedMessages
+              );
+            }
+          }
+        }
+      } catch (error) {
+        logger.error("Error updating message status via WebSocket:", {
+          message: error.message,
+          stack: error.stack,
+        });
+      }
+    }
+  );
+
   // Handle user disconnection
   socket.on("disconnect", async () => {
     logger.info(`User disconnected process started at: ${socket.id}`);
