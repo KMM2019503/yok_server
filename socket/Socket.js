@@ -190,6 +190,7 @@ io.on("connection", (socket) => {
             where: { groupId: conversationId },
             select: {
               id: true,
+              senderId: true, // Include senderId for the comparison
               status: true,
             },
           });
@@ -199,19 +200,20 @@ io.on("connection", (socket) => {
             where: { conversationId: conversationId },
             select: {
               id: true,
+              senderId: true, // Include senderId for the comparison
               status: true,
             },
           });
         }
 
-        // Filter out messages where the user has already marked them as read
         const messagesToUpdate = messages.filter(
-          ({ status }) => !status.seenUserIds.includes(userId)
+          ({ status, senderId }) =>
+            !status.seenUserIds.includes(userId) && senderId !== userId
         );
 
         if (messagesToUpdate.length === 0) {
           console.log(
-            "No messages need updating. User is already in seenUserIds."
+            "No messages need updating. User is already in seenUserIds or is the sender."
           );
           return;
         }
