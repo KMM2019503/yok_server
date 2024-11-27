@@ -156,6 +156,11 @@ export const getChannelMessagesServices = async (req) => {
         status: true,
         createdAt: true,
         channelId: true,
+        _count: {
+          select: {
+            comments: true,
+          },
+        },
         sender: {
           select: {
             id: true,
@@ -751,7 +756,12 @@ export const getLatestMessagesInChannelsService = async (req) => {
             fileUrls: true,
             status: true,
             createdAt: true,
-            channel: true,
+            channelId: true,
+            _count: {
+              select: {
+                comments: true,
+              },
+            },
             sender: {
               select: {
                 id: true,
@@ -777,6 +787,54 @@ export const getLatestMessagesInChannelsService = async (req) => {
     };
   } catch (error) {
     throw error;
+  }
+};
+
+export const getCommentsService = async (req) => {
+  try {
+    const { userid } = req.headers;
+    const { messageId } = req.query;
+
+    // Validate user ID
+    if (!userid) {
+      throw new Error("User ID not found");
+    }
+
+    // Validate message ID
+    if (!messageId) {
+      throw new Error("Message ID not provided");
+    }
+
+    // Fetch comments related to the specified message ID
+    const comments = await prisma.comment.findMany({
+      where: {
+        messageId,
+      },
+      orderBy: {
+        createdAt: "desc", // Latest comments first
+      },
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            userName: true,
+            phone: true,
+            profilePictureUrl: true,
+          },
+        },
+      },
+    });
+
+    return {
+      success: true,
+      comments,
+    };
+  } catch (error) {
+    console.error("Error fetching comments:", error.message);
+    return {
+      success: false,
+      message: error.message,
+    };
   }
 };
 
