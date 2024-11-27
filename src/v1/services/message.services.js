@@ -1,7 +1,6 @@
 // message.services.js
 import logger from "../utils/logger";
 import { getReceiverSocketId, io } from "../../../socket/Socket";
-import { retryWithBackoff } from "../utils/helper";
 import { sendNotification } from "../utils/notifications/noti";
 import prisma from "../../../prisma/prismaClient";
 
@@ -229,25 +228,6 @@ const getOrCreateConversation = async (
   return conversation;
 };
 
-// Helper function to emit the new message
-const emitNewMessage = async (receiverId, message) => {
-  const receiverSocketId = getReceiverSocketId(receiverId);
-  if (receiverSocketId) {
-    io.to(receiverSocketId).emit("newMessage", message, (ack) => {
-      if (!ack) {
-        logger.error(
-          "Socket emit acknowledgment failed, recipient might be disconnected"
-        );
-      }
-    });
-
-    return true;
-  } else {
-    // sending notification if the user is offline
-    return false;
-  }
-};
-
 export const sendGroupMessageService = async (req) => {
   const { userid } = req.headers;
   const { content, groupId, photoUrl, fileUrls } = req.body;
@@ -362,17 +342,6 @@ export const sendGroupMessageService = async (req) => {
     });
     throw new Error(error.message);
   }
-};
-// Helper function to emit the new group message to all members
-const emitNewGroupMessage = async (roomId, message) => {
-  // io.to(roomId).emit("newGroupMessage", message, (ack) => {
-  //   if (!ack) {
-  //     logger.error(
-  //       "Socket emit acknowledgment failed, some recipients might be disconnected"
-  //     );
-  //   }
-  // });
-  io.to(roomId).emit("newGroupMessage", message);
 };
 
 export const sendChannelMessageService = async (req) => {
@@ -502,12 +471,112 @@ export const sendChannelMessageService = async (req) => {
   }
 };
 
-// Helper function to emit the new channel message to all members
+export const sendChannelMessageCommentService = async (req) => {
+  const { userid } = req.headers;
+  const { content, messageId } = req.body;
+
+  if (!userid && !content && !messageId) {
+    throw new Error(
+      "Missing userid or content or message id from request body"
+    );
+  }
+
+  try {
+    // Step 1: Create comment and fetch related message
+    const { comment } = await prisma.$transaction(async (prismaClient) => {
+      console.log("Channel comment creation start");
+
+      const comment = await prismaClient.comment.create({
+        data: {
+          content,
+          createdById: userid,
+          messageId,
+        },
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          createdBy: {
+            select: {
+              id: true,
+              userName: true,
+              phone: true,
+              profilePictureUrl: true,
+              firebaseUserId: true,
+            },
+          },
+          message: {
+            select: {
+              id: true,
+              channelId: true,
+            },
+          },
+        },
+      });
+
+      return { comment };
+    });
+
+    const response = {
+      success: true,
+      comment,
+    };
+
+    // Step 2: Emit the new comment to all channel members
+    (async () => {
+      try {
+        await emitNewChannelComment(comment.message.channelId, comment);
+      } catch (error) {
+        logger.error("Error in post-channel-comment processing tasks:", {
+          message: error.message,
+          stack: error.stack,
+        });
+      }
+    })();
+
+    return response;
+  } catch (error) {
+    logger.error("Error sending channel comment:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    throw new Error(error.message);
+  }
+};
+
+// Emit comment to channel members
+const emitNewChannelComment = async (channelId, comment) => {
+  io.to(channelId).emit("newChannelComment", comment);
+};
+
+// emit new message to online users
+const emitNewMessage = async (receiverId, message) => {
+  const receiverSocketId = getReceiverSocketId(receiverId);
+  if (receiverSocketId) {
+    io.to(receiverSocketId).emit("newMessage", message, (ack) => {
+      if (!ack) {
+        logger.error(
+          "Socket emit acknowledgment failed, recipient might be disconnected"
+        );
+      }
+    });
+
+    return true;
+  } else {
+    // sending notification if the user is offline
+    return false;
+  }
+};
+
+const emitNewGroupMessage = async (roomId, message) => {
+  io.to(roomId).emit("newGroupMessage", message);
+};
+
 const emitNewChannelMessage = async (roomId, message) => {
   io.to(roomId).emit("newChannelMessage", message);
 };
 
-// Helper function to generate notifications for offline users
+// Sending Notifications to offline users
 const generateOfflineNotifications = async (
   channelId,
   offlineMembers,
@@ -525,111 +594,5 @@ const generateOfflineNotifications = async (
     }
   } catch (error) {
     logger.error("Error generating offline notifications:", error);
-  }
-};
-
-export const sendGroupMessageServiceOld = async (req) => {
-  const { userid } = req.headers;
-  const { content, groupId, photoUrl, fileUrls } = req.body;
-
-  const now = new Date();
-  const maxLength = 30;
-  const truncatedContent =
-    content.length > maxLength ? content.slice(0, maxLength) + "..." : content;
-
-  try {
-    const result = await retryWithBackoff(
-      async () => {
-        return await prisma.$transaction(async (prisma) => {
-          const group = await prisma.group.findUnique({
-            where: { id: groupId },
-            include: {
-              members: {
-                include: {
-                  user: {
-                    select: {
-                      id: true,
-                      firebaseUserId: true,
-                    },
-                  },
-                },
-              },
-            },
-          });
-
-          if (!group) {
-            throw new Error("Group not found");
-          }
-
-          const messageData = {
-            senderId: userid,
-            content,
-            groupId: group.id,
-            photoUrl: photoUrl || [],
-            fileUrls: fileUrls || [],
-            status: "SENT",
-          };
-
-          // Save the message and update group data concurrently
-          const [message] = await Promise.all([
-            prisma.message.create({
-              data: messageData,
-              select: {
-                id: true,
-                content: true,
-                photoUrl: true,
-                fileUrls: true,
-                status: true,
-                createdAt: true,
-                groupId: true,
-                sender: {
-                  select: {
-                    id: true,
-                    userName: true,
-                    phone: true,
-                    profilePictureUrl: true,
-                    firebaseUserId: true,
-                  },
-                },
-              },
-            }),
-            prisma.group.update({
-              where: { id: group.id },
-              data: {
-                lastMessage: {
-                  content: truncatedContent,
-                  senderId: userid,
-                  createdAt: now,
-                },
-                lastActivity: now,
-              },
-            }),
-          ]);
-          const offlineMembers = group.members.filter((member) => {
-            return !getReceiverSocketId(member.user.id);
-          });
-          return { group, message, offlineMembers };
-        });
-      },
-      4,
-      500
-    );
-
-    console.log("🚀 ~ sendGroupMessageService ~ result:", result);
-
-    await emitNewGroupMessage(result.group.id, result.message);
-
-    // Generate Notification
-
-    return {
-      success: true,
-      message: result.message,
-    };
-  } catch (error) {
-    logger.error("Error sending group message:", {
-      message: error.message,
-      stack: error.stack,
-    });
-    throw new Error(error.message);
   }
 };

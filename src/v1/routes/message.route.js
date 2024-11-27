@@ -3,6 +3,7 @@ import { Router } from "express";
 import { checkToken } from "../middlewares/checkAuth";
 import {
   sendChannelMessage,
+  sendChannelMessageComment,
   //   sendMessage,
   sendDmMessage,
   sendGroupMessage,
@@ -19,7 +20,10 @@ router.post("/direct-message", sendDmMessage);
 //Send Group messages
 router.post("/group-messages", sendGroupMessage);
 
-//Send Group messages
+//Send Channel messages
 router.post("/channel-messages", checkIsAdmin, sendChannelMessage);
+
+//Send Channel message comment
+router.post("/channel-messages-comment", sendChannelMessageComment);
 
 export default router;
