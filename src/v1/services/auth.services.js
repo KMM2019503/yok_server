@@ -1,11 +1,7 @@
-import { PrismaClient } from "@prisma/client";
-import { loginSchema } from "../validation/auth.validation";
-import { ValidationError } from "../utils/validationErrors";
+import prisma from "../../../prisma/prismaClient";
 import logger from "../utils/logger";
 import admin from "../utils/firebase";
 import { removeSpacingOnPhoneNumber } from "../utils/helper";
-
-const prisma = new PrismaClient();
 
 export const login = async (req, res) => {
   try {

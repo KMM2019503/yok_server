@@ -21,7 +21,7 @@ import {
 
 const router = Router();
 
-router.use(checkToken);
+// router.use(checkToken);
 
 router.get("/:channelId", getChannel);
 

@@ -1,13 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-import logger from "../utils/logger";
-import {
-  createChannelSchema,
-  updateChannelSchema,
-} from "../validation/channel.validation";
-import { ValidationError } from "../utils/validationErrors";
-import { getReceiverSocketId, io } from "../../../socket/Socket";
-
-const prisma = new PrismaClient();
+import prisma from "../../../prisma/prismaClient";
 
 export const createChannelService = async (req) => {
   try {
