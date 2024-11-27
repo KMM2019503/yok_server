@@ -1,25 +1,11 @@
-import { response } from "express";
 import {
+  sendChannelMessageCommentService,
   sendChannelMessageService,
   sendDmMessageService,
   sendGroupMessageService,
 } from "../services/message.services";
 
-// import { sendMessageService } from "../services/message.services";
 import logger from "../utils/logger";
-
-// export const sendMessage = async (req, res) => {
-//   try {
-//     const response = await sendMessageService(req);
-//     res.status(201).json(response);
-//   } catch (error) {
-//     logger.error("Error occurred during sendMessage:", {
-//       message: error.message,
-//       stack: error.stack,
-//     });
-//     res.status(500).json({ error: error.message });
-//   }
-// };
 
 export const sendDmMessage = async (req, res) => {
   try {
@@ -53,6 +39,19 @@ export const sendChannelMessage = async (req, res) => {
     res.status(201).json(response);
   } catch (error) {
     logger.error("Error occurred during Send channel Message:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const sendChannelMessageComment = async (req, res) => {
+  try {
+    const response = await sendChannelMessageCommentService(req);
+    res.status(201).json(response);
+  } catch (error) {
+    logger.error("Error occurred during Send channel Message Comment:", {
       message: error.message,
       stack: error.stack,
     });
