@@ -6,6 +6,7 @@ import {
   getAllChannelsService,
   getChannelMessagesServices,
   getChannelService,
+  getCommentsService,
   getLatestMessagesInChannelsService,
   joinMemberToChannelService,
   leaveMemberFromChannelService,
@@ -193,6 +194,19 @@ export const getLatestMessagesInChannel = async (req, res) => {
     res.status(200).json(response);
   } catch (error) {
     logger.error("Error occurred during fetch latest message In channels:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getComments = async (req, res) => {
+  try {
+    const response = await getCommentsService(req);
+    res.status(200).json(response);
+  } catch (error) {
+    logger.error("Error occurred during fetch comments:", {
       message: error.message,
       stack: error.stack,
     });
