@@ -60,6 +60,7 @@ export const sendDmMessageService = async (req) => {
         return { message, conversation };
       }
     );
+    console.log("🚀 ~ sendDmMessageService ~ conversation:", conversation);
 
     // Step 2: Immediately return the response
     const response = {
@@ -106,13 +107,14 @@ export const sendDmMessageService = async (req) => {
         //     (m) => m.user.id === receiverId
         //   );
         //   if (receiver) {
+        //     const FcmTokens = receiver.user.fcm.map((token) => token.token);
         //     const payload = {
         //       title: `New Message from ${message.sender.userName}`,
         //       body: truncatedContent,
         //       icon: message.sender.profilePictureUrl,
         //       data: { sender: message.sender.userName },
         //     };
-        //     await sendNotification([receiver.user.firebaseUserId], payload);
+        //     await sendNotification(FcmTokens, payload);
         //   }
         // }
       } catch (error) {
@@ -163,7 +165,7 @@ const getOrCreateConversation = async (
                 userName: true,
                 phone: true,
                 profilePictureUrl: true,
-                firebaseUserId: true,
+                fcm: true,
               },
             },
           },

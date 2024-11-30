@@ -13,8 +13,10 @@ model User {
   firebaseUserId      String               @unique @map("firebase_user_id")
   phone               String               @unique
   userName            String?              @map("user_name")
+  dob                 DateTime?
   profilePictureUrl   String?              @map("profile_picture_url")
   lastActiveAt        DateTime?            @map("last_active_at")
+  fcm                 Json                 @default("[]")
   sentMessages        Message[]            @relation("SentMessages")
   conversationMembers ConversationMember[]
   adminChannels       Channel[]            @relation("AdminChannels")
