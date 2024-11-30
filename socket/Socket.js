@@ -187,7 +187,7 @@ io.on("connection", (socket) => {
         if (groupId) {
           // Fetch messages for the given group
           messages = await prisma.message.findMany({
-            where: { groupId: conversationId },
+            where: { groupId: groupId },
             select: {
               id: true,
               senderId: true, // Include senderId for the comparison

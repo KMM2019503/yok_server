@@ -92,3 +92,95 @@ export const fetchUserByPhoneNumberService = async (req) => {
     user: user,
   };
 };
+
+export const addFcmTokenService = async (req) => {
+  try {
+    const { userid } = req.headers;
+    const { fcmToken } = req.body;
+
+    if (!userid || !fcmToken) {
+      throw new Error("User ID and FCM token are required.");
+    }
+
+    // Fetch the user with their FCM tokens
+    const user = await prisma.user.findUnique({
+      where: { id: userid },
+      select: { fcm: true },
+    });
+
+    if (!user) {
+      throw new Error("User not found.");
+    }
+
+    const existingTokens = user.fcm || [];
+    const tokenExists = existingTokens.some(
+      (entry) => entry.token === fcmToken
+    );
+
+    if (!tokenExists) {
+      const currentDate = new Date();
+
+      // Add the new token
+      const updatedFcmTokens = [
+        ...existingTokens,
+        { token: fcmToken, createdAt: currentDate },
+      ];
+
+      // Update user with new FCM tokens
+      await prisma.user.update({
+        where: { id: userid },
+        data: { fcm: updatedFcmTokens },
+      });
+
+      return { success: true };
+    }
+
+    return {
+      success: true,
+    };
+  } catch (error) {
+    console.error("Error in addFcmTokenService:", error);
+    throw error;
+  }
+};
+
+export const removeFcmTokenService = async (req) => {
+  try {
+    const { userid } = req.headers;
+    const { fcmToken } = req.body;
+
+    if (!userid || !fcmToken) {
+      throw new Error("User ID and FCM token are required.");
+    }
+
+    // Fetch the user with their FCM tokens
+    const user = await prisma.user.findUnique({
+      where: { id: userid },
+      select: { fcm: true },
+    });
+
+    if (!user) {
+      throw new Error("User not found.");
+    }
+
+    const existingTokens = user.fcm || [];
+    const updatedFcmTokens = existingTokens.filter(
+      (entry) => entry.token !== fcmToken
+    );
+
+    if (existingTokens.length === updatedFcmTokens.length) {
+      return { success: false, message: "Token not found, no changes made." };
+    }
+
+    // Update the user's FCM tokens
+    await prisma.user.update({
+      where: { id: userid },
+      data: { fcm: updatedFcmTokens },
+    });
+
+    return { success: true, message: "FCM token removed successfully." };
+  } catch (error) {
+    console.error("Error in removeFcmTokenService:", error);
+    throw error;
+  }
+};

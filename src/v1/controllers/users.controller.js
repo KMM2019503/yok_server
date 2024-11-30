@@ -1,6 +1,8 @@
 import {
+  addFcmTokenService,
   deleteUserService,
   fetchUserByPhoneNumberService,
+  removeFcmTokenService,
   updateUserService,
 } from "../services/users.services.js";
 import logger from "../utils/logger.js";
@@ -46,6 +48,38 @@ export const getUserByPhoneNumber = async (req, res) => {
         statusCode: error.statusCode,
         errorCode: error.errorCode,
       },
+      success: false,
+    });
+  }
+};
+
+export const addFcmToken = async (req, res) => {
+  try {
+    const response = await addFcmTokenService(req);
+    res.status(201).json(response);
+  } catch (error) {
+    logger.error("Error occurred adding Fcm Token:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({
+      ErrorMessage: error.message,
+      success: false,
+    });
+  }
+};
+
+export const removeFcmToken = async (req, res) => {
+  try {
+    const response = await removeFcmTokenService(req);
+    res.status(201).json(response);
+  } catch (error) {
+    logger.error("Error occurred removing Fcm Token:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({
+      ErrorMessage: error.message,
       success: false,
     });
   }
