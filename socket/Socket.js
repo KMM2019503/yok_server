@@ -168,9 +168,10 @@ io.on("connection", (socket) => {
   socket.on(
     "initialMarkMessagesAsRead",
     async ({ conversationId, userId, groupId }) => {
-      console.log("🚀 ~ userId:", userId);
       try {
         const startTime = Date.now();
+        console.log("🚀 ~ userId:", userId);
+        console.log("🚀 ~ conversationId:", conversationId);
         console.log(
           `Message status updating process started at ${new Date(
             startTime

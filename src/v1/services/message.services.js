@@ -24,8 +24,6 @@ export const sendDmMessageService = async (req) => {
           receiverId
         );
 
-        logger.debug({ conversation });
-
         const message = await prismaClient.message.create({
           data: {
             senderId: userid,
@@ -50,8 +48,8 @@ export const sendDmMessageService = async (req) => {
               select: {
                 id: true,
                 userName: true,
+                phone: true,
                 profilePictureUrl: true,
-                firebaseUserId: true,
               },
             },
           },
@@ -194,7 +192,6 @@ const getOrCreateConversation = async (
                 userName: true,
                 phone: true,
                 profilePictureUrl: true,
-                firebaseUserId: true,
               },
             },
           },
@@ -215,7 +212,6 @@ const getOrCreateConversation = async (
               userName: true,
               phone: true,
               profilePictureUrl: true,
-              firebaseUserId: true,
             },
           },
         },
@@ -268,7 +264,6 @@ export const sendGroupMessageService = async (req) => {
               userName: true,
               phone: true,
               profilePictureUrl: true,
-              firebaseUserId: true,
             },
           },
         },
@@ -386,7 +381,6 @@ export const sendChannelMessageService = async (req) => {
               userName: true,
               phone: true,
               profilePictureUrl: true,
-              firebaseUserId: true,
             },
           },
         },
@@ -504,7 +498,6 @@ export const sendChannelMessageCommentService = async (req) => {
               userName: true,
               phone: true,
               profilePictureUrl: true,
-              firebaseUserId: true,
             },
           },
           message: {

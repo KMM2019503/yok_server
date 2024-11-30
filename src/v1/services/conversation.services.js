@@ -34,7 +34,6 @@ export const getAllConversationsService = async (req) => {
                 userName: true,
                 phone: true,
                 profilePictureUrl: true,
-                firebaseUserId: true,
               },
             },
           },
@@ -46,8 +45,6 @@ export const getAllConversationsService = async (req) => {
         lastActivity: "desc",
       },
     });
-
-    logger.debug({ conversations });
 
     return {
       success: true,
@@ -84,7 +81,6 @@ export const getConversationMessagesService = async (req, res) => {
             userName: true,
             phone: true,
             profilePictureUrl: true,
-            firebaseUserId: true,
           },
         },
       },
@@ -165,7 +161,6 @@ export const getConversationService = async (req) => {
                 userName: true,
                 phone: true,
                 profilePictureUrl: true,
-                firebaseUserId: true,
               },
             },
           },
@@ -219,7 +214,6 @@ export const getLatestMessagesInConversationsService = async (req) => {
                 userName: true,
                 phone: true,
                 profilePictureUrl: true,
-                firebaseUserId: true,
               },
             },
           },
@@ -243,7 +237,6 @@ export const getLatestMessagesInConversationsService = async (req) => {
                 userName: true,
                 phone: true,
                 profilePictureUrl: true,
-                firebaseUserId: true,
               },
             },
           },
