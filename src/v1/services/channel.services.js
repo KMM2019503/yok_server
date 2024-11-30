@@ -661,6 +661,7 @@ export const leaveMemberFromChannelService = async (req) => {
 export const getChannelService = async (req) => {
   try {
     const { userid } = req.headers;
+    const { channelId } = req.params;
 
     logger.debug(req.headers);
 
@@ -670,6 +671,7 @@ export const getChannelService = async (req) => {
 
     const channel = await prisma.channel.findFirst({
       where: {
+        id: channelId,
         members: {
           some: {
             userId: userid,

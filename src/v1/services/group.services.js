@@ -532,6 +532,7 @@ export const removeMemberFromGroupService = async (req) => {
 export const getGroupService = async (req) => {
   try {
     const { userid } = req.headers;
+    const { groupId } = req.params;
 
     logger.debug(req.headers);
 
@@ -542,6 +543,7 @@ export const getGroupService = async (req) => {
     // Fetch conversations where the user is a member, with pagination
     const group = await prisma.group.findFirst({
       where: {
+        id: groupId,
         members: {
           some: {
             userId: userid,

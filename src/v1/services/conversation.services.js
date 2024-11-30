@@ -136,6 +136,7 @@ export const getConversationMessagesService = async (req, res) => {
 export const getConversationService = async (req) => {
   try {
     const { userid } = req.headers;
+    const { conversationId } = req.params;
 
     logger.debug(req.headers);
 
@@ -146,6 +147,7 @@ export const getConversationService = async (req) => {
     // Fetch conversations where the user is a member, with pagination
     const conversation = await prisma.conversation.findFirst({
       where: {
+        id: conversationId,
         members: {
           some: {
             userId: userid,
