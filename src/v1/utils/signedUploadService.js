@@ -38,9 +38,6 @@ export const getSignedUploadDetails = async (
   }
 
   try {
-    console.log("🚀 ~ getSignedUploadDetails ~ fileSize:", fileSize);
-
-    console.log("🚀 ~ getSignedUploadDetails ~ fileType:", fileType);
     const transformations = validateFileType(fileType);
 
     const timestamp = Math.floor(Date.now() / 1000);
@@ -52,6 +49,7 @@ export const getSignedUploadDetails = async (
       },
       process.env.CLOUDINARY_API_SECRET
     );
+    console.log("🚀 ~ signature:", signature);
 
     return {
       url: `https://api.cloudinary.com/v1_1/${process.env.CLOUDINARY_CLOUD_NAME}/auto/upload`,
