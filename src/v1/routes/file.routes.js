@@ -30,15 +30,19 @@ router.post("/generate-presigned-url", async (req, res) => {
     }
 
     // Generate signed URL details
-    const uploadDetails = await getSignedUploadDetails(folder, fileType, fileSize);
-    
+    const uploadDetails = await getSignedUploadDetails(
+      folder,
+      fileType,
+      fileSize
+    );
+
     res.status(200).json({
       success: true,
       uploadDetails,
     });
   } catch (error) {
     console.error("Error generating signed URL:", error);
-    res.status(500).json({ success: false,error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

@@ -7,7 +7,7 @@ import { AppError } from "../utils/error/app_error";
 
 export const updateUserService = async (req) => {
   try {
-    const { userid } = req.header;
+    const { userid } = req.headers;
     const { body } = req;
 
     // Validate the userId and body if necessary
@@ -22,6 +22,8 @@ export const updateUserService = async (req) => {
         // Only update the fields that are provided in the body
         phone: body.phone,
         userName: body.userName,
+        email: body.email,
+        dateOfBirth: body.dateOfBirth,
         profilePictureUrl: body.profilePictureUrl,
         updatedAt: new Date(), // Update the updatedAt timestamp
       },
