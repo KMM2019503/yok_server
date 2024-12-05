@@ -40,12 +40,13 @@ export const getSignedUploadDetails = async (
   try {
     const transformations = validateFileType(fileType);
 
-    const timestamp = Math.floor(Date.now() / 1000);
+    const timestamp = Math.round(new Date().getTime() / 1000);
     const signature = await cloudinary.v2.utils.api_sign_request(
       {
         timestamp,
-        folder,
-        transformation: transformations,
+        // timestamp,
+        // folder,
+        // transformation: transformations,
       },
       process.env.CLOUDINARY_API_SECRET
     );
