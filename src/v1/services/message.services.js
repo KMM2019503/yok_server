@@ -236,10 +236,14 @@ export const sendGroupMessageService = async (req) => {
 
   const now = new Date();
   const maxLength = 30;
-  let truncatedContent =
-    content.length > maxLength ? content.slice(0, maxLength) + "..." : content;
+  let truncatedContent;
 
-  if (photoUrl.length > 0 || fileUrls.length > 0) {
+  if (content) {
+    truncatedContent =
+      content.length > maxLength
+        ? content.slice(0, maxLength) + "..."
+        : content;
+  } else {
     truncatedContent = "📷 Attachments have been sent.";
   }
   try {
@@ -355,10 +359,14 @@ export const sendChannelMessageService = async (req) => {
 
   const now = new Date();
   const maxLength = 30;
-  let truncatedContent =
-    content.length > maxLength ? content.slice(0, maxLength) + "..." : content;
+  let truncatedContent;
 
-  if (photoUrl.length > 0 || fileUrls.length > 0) {
+  if (content) {
+    truncatedContent =
+      content.length > maxLength
+        ? content.slice(0, maxLength) + "..."
+        : content;
+  } else {
     truncatedContent = "📷 Attachments have been sent.";
   }
 
