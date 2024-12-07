@@ -14,7 +14,7 @@ export const sendDmMessageService = async (req) => {
     content.length > maxLength ? content.slice(0, maxLength) + "..." : content;
 
   if (photoUrl.length > 0 || fileUrls.length > 0) {
-    truncatedContent = "📷 Attachments have been sent.";
+    truncatedContent = "Attachments sent.";
   }
 
   try {
@@ -244,7 +244,7 @@ export const sendGroupMessageService = async (req) => {
         ? content.slice(0, maxLength) + "..."
         : content;
   } else {
-    truncatedContent = "📷 Attachments have been sent.";
+    truncatedContent = "Attachments sent.";
   }
   try {
     // Step 1: Create message and fetch conversation
@@ -367,7 +367,7 @@ export const sendChannelMessageService = async (req) => {
         ? content.slice(0, maxLength) + "..."
         : content;
   } else {
-    truncatedContent = "📷 Attachments have been sent.";
+    truncatedContent = "Attachments sent.";
   }
 
   try {
