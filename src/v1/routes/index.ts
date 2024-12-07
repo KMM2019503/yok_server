@@ -8,9 +8,9 @@ import ConversationRoutes from "./conversation.route"
 import ContactRoutes from "./contact.routes"
 import GroupRoutes from "./groups.route"
 import multiSearchRoutes from "./multiSearch.routes"
+import FileUrl from "./file.routes"
 
 const router = Router();
-
 
 router.use("/", authRoutes)
 router.use("/users", userRoutes)
@@ -21,6 +21,8 @@ router.use('/contacts', ContactRoutes)
 router.use('/groups', GroupRoutes)
 
 router.use('/multiSearch', multiSearchRoutes)
+
+router.use('/file', FileUrl)
 
 
 // Add other routes here
