@@ -2,6 +2,7 @@
 import { Router } from "express";
 import { checkToken } from "../middlewares/checkAuth";
 import {
+  sendChannelInvitationMessage,
   sendChannelMessage,
   sendChannelMessageComment,
   //   sendMessage,
@@ -16,6 +17,8 @@ const router = Router();
 
 // Send DM messages
 router.post("/direct-message", sendDmMessage);
+
+router.post("/send-invitation", sendChannelInvitationMessage);
 
 //Send Group messages
 router.post("/group-messages", sendGroupMessage);

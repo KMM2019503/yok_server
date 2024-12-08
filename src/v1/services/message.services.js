@@ -6,7 +6,13 @@ import prisma from "../../../prisma/prismaClient";
 
 export const sendDmMessageService = async (req) => {
   const { userid } = req.headers;
-  const { content, conversationId, photoUrl, fileUrls, receiverId } = req.body;
+  const {
+    content,
+    conversationId,
+    photoUrl = [],
+    fileUrls = [],
+    receiverId,
+  } = req.body;
 
   const now = new Date();
   const maxLength = 30;
@@ -59,10 +65,10 @@ export const sendDmMessageService = async (req) => {
           },
         });
 
+        console.log("🚀 ~ sendDmMessageService ~ conversation Final Updating");
         return { message, conversation };
       }
     );
-    console.log("🚀 ~ sendDmMessageService ~ conversation:", conversation);
 
     // Step 2: Immediately return the response
     const response = {
@@ -230,9 +236,159 @@ const getOrCreateConversation = async (
   return conversation;
 };
 
+export const sendChannelInvitationService = async (req) => {
+  const { userid } = req.headers;
+  const { receiverIds, channelId } = req.body;
+
+  if (!receiverIds || receiverIds.length === 0) {
+    throw new Error("No receivers provided");
+  }
+
+  try {
+    const now = new Date();
+
+    // Step 1: Iterate over each receiver to find or create conversations
+    const messages = await Promise.all(
+      receiverIds.map(async (receiverId) => {
+        console.log("🚀 ~ Current Receiver Id is :", receiverId);
+        // Find or create a conversation for each receiver
+        const conversation = await prisma.$transaction(async (prismaClient) => {
+          const existingConversation = await prisma.conversation.findFirst({
+            where: {
+              members: {
+                every: {
+                  userId: {
+                    in: [userid, receiverId],
+                  },
+                },
+                some: {
+                  userId: userid,
+                },
+              },
+            },
+            include: {
+              members: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      userName: true,
+                      phone: true,
+                      profilePictureUrl: true,
+                      fcm: true,
+                    },
+                  },
+                },
+              },
+            },
+          });
+
+          // If an existing conversation is found, return it
+          if (existingConversation) {
+            console.log(
+              "🚀 ~ conversation ~ existingConversation:",
+              existingConversation
+            );
+            console.log("Conversation found");
+            return existingConversation;
+          }
+          console.log(
+            "Conversation not found So We Need to create a new conversation"
+          );
+          // If no conversation is found, create a new one
+          return await prisma.conversation.create({
+            data: {
+              members: {
+                create: [{ userId: userid }, { userId: receiverId }],
+              },
+            },
+            include: {
+              members: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      userName: true,
+                      phone: true,
+                      profilePictureUrl: true,
+                    },
+                  },
+                },
+              },
+            },
+          });
+        });
+
+        // Step 2: Create a channel invitation message in the conversation
+        const message = await prisma.message.create({
+          data: {
+            senderId: userid,
+            content: `You have been invited to join channel.`,
+            conversationId: conversation.id,
+            messageType: "CHANNEL_INVITATION",
+            references: {
+              channelId,
+            },
+            status: {
+              status: "SENT",
+              seenUserIds: [],
+            },
+          },
+          select: {
+            id: true,
+            content: true,
+            createdAt: true,
+            conversationId: true,
+            sender: {
+              select: {
+                id: true,
+                userName: true,
+                profilePictureUrl: true,
+              },
+            },
+            references: true,
+            messageType: true,
+          },
+        });
+
+        await emitNewMessage(receiverId, message);
+
+        console.log("conversation update process start");
+        let updateConverstion = await prisma.conversation.update({
+          where: { id: conversation.id },
+          data: {
+            lastMessage: {
+              content: "You have been invited to join channel.",
+              senderId: userid,
+              createdAt: now,
+            },
+            lastActivity: now,
+          },
+        });
+        console.log(
+          "🚀 ~ receiverIds.map ~ updateConverstion:",
+          updateConverstion
+        );
+        console.log("conversation update process end");
+        return message;
+      })
+    );
+
+    return {
+      success: true,
+    };
+  } catch (error) {
+    logger.error("Error sending channel invitations:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    throw error;
+  }
+};
+
 export const sendGroupMessageService = async (req) => {
   const { userid } = req.headers;
-  const { content, groupId, photoUrl, fileUrls } = req.body;
+  const { content, groupId, photoUrl = [], fileUrls = [] } = req.body;
 
   const now = new Date();
   const maxLength = 30;
@@ -355,7 +511,7 @@ export const sendGroupMessageService = async (req) => {
 
 export const sendChannelMessageService = async (req) => {
   const { userid } = req.headers;
-  const { content, channelId, photoUrl, fileUrls } = req.body;
+  const { content, channelId, photoUrl = [], fileUrls = [] } = req.body;
 
   const now = new Date();
   const maxLength = 30;

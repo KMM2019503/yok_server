@@ -73,6 +73,8 @@ export const getConversationMessagesService = async (req, res) => {
         photoUrl: true,
         fileUrls: true,
         status: true,
+        messageType: true,
+        references: true,
         createdAt: true,
         conversationId: true,
         sender: {

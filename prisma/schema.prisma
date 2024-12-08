@@ -103,6 +103,21 @@ type SeenStatus {
   seenUserIds String[]      @db.ObjectId
 }
 
+enum MessageType {
+  STANDARD
+  CHANNEL_INVITATION
+  FORWARD
+  REPLY
+}
+
+type References {
+  channelId          String?
+  originalMessageId  String?
+  originalSenderId   String?
+  fromConversationId String?
+  fromChannelId      String?
+}
+
 model Message {
   id             String        @id @default(auto()) @map("_id") @db.ObjectId
   sender         User          @relation("SentMessages", fields: [senderId], references: [id])
@@ -112,6 +127,8 @@ model Message {
   fileUrls       String[]
   comments       Comment[]
   status         SeenStatus
+  references     References?
+  messageType    MessageType   @default(STANDARD)
   conversation   Conversation? @relation(fields: [conversationId], references: [id])
   conversationId String?       @db.ObjectId
   channel        Channel?      @relation(fields: [channelId], references: [id])
