@@ -8,6 +8,7 @@ import {
   getChannelService,
   getCommentsService,
   getLatestMessagesInChannelsService,
+  joinChannelByInvitationServices,
   joinMemberToChannelService,
   leaveMemberFromChannelService,
   removeAdminService,
@@ -25,7 +26,7 @@ export const createChannel = async (req, res) => {
       message: error.message,
       stack: error.stack,
     });
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, success: false });
   }
 };
 
@@ -38,7 +39,7 @@ export const updateChannel = async (req, res) => {
       message: error.message,
       stack: error.stack,
     });
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, success: false });
   }
 };
 
@@ -52,7 +53,7 @@ export const getAllChannels = async (req, res) => {
       message: error.message,
       stack: error.stack,
     });
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, success: false });
   }
 };
 
@@ -65,7 +66,7 @@ export const getChannelMessagesByChannelId = async (req, res) => {
       message: error.message,
       stack: error.stack,
     });
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, success: false });
   }
 };
 
@@ -81,7 +82,7 @@ export const addAdminToChannel = async (req, res) => {
       message: error.message,
       stack: error.stack,
     });
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, success: false });
   }
 };
 
@@ -96,7 +97,7 @@ export const removeAdminFromChannel = async (req, res) => {
       message: error.message,
       stack: error.stack,
     });
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, success: false });
   }
 };
 
@@ -111,7 +112,7 @@ export const deleteChannel = async (req, res) => {
       message: error.message,
       stack: error.stack,
     });
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, success: false });
   }
 };
 
@@ -126,7 +127,7 @@ export const addMemberToChannel = async (req, res) => {
       message: error.message,
       stack: error.stack,
     });
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, success: false });
   }
 };
 
@@ -141,7 +142,7 @@ export const removeMemberFromChannel = async (req, res) => {
       message: error.message,
       stack: error.stack,
     });
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, success: false });
   }
 };
 
@@ -156,7 +157,7 @@ export const joinMemberToChannel = async (req, res) => {
       message: error.message,
       stack: error.stack,
     });
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, success: false });
   }
 };
 
@@ -171,7 +172,7 @@ export const leaveMemberFromChannel = async (req, res) => {
       message: error.message,
       stack: error.stack,
     });
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, success: false });
   }
 };
 
@@ -184,7 +185,7 @@ export const getChannel = async (req, res) => {
       message: error.message,
       stack: error.stack,
     });
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, success: false });
   }
 };
 
@@ -197,7 +198,7 @@ export const getLatestMessagesInChannel = async (req, res) => {
       message: error.message,
       stack: error.stack,
     });
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, success: false });
   }
 };
 
@@ -210,6 +211,19 @@ export const getComments = async (req, res) => {
       message: error.message,
       stack: error.stack,
     });
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, success: false });
+  }
+};
+
+export const joinChannelByInvitation = async (req, res) => {
+  try {
+    const response = await joinChannelByInvitationServices(req);
+    res.status(200).json(response);
+  } catch (error) {
+    logger.error("Error occurred Join Channel By Invitation:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: error.message, success: false });
   }
 };

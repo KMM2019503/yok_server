@@ -834,6 +834,49 @@ export const getCommentsService = async (req) => {
   }
 };
 
+export const joinChannelByInvitationServices = async (req) => {
+  try {
+    const { userid } = req.headers; // ID of the current user
+    const { channelId } = req.body; // ID of the channel to join
+
+    // Validate input
+    if (!userid) {
+      throw new Error("User ID is required");
+    }
+    if (!channelId) {
+      throw new Error("Channel ID is required");
+    }
+
+    // Check if the user is already a member of the channel
+    const isMember = await prisma.channelMember.findFirst({
+      where: {
+        userId: userid,
+        channelId: channelId,
+      },
+    });
+
+    if (isMember) {
+      throw new Error("User is already a member of this channel");
+    }
+
+    // Add the user to the channel
+    await prisma.channelMember.create({
+      data: {
+        userId: userid,
+        channelId: channelId,
+        joinedAt: new Date(),
+      },
+    });
+
+    return {
+      success: true,
+    };
+  } catch (error) {
+    logger.error("🚀 ~ joinChannelByInvitationServices ~ error:", error);
+    throw error;
+  }
+};
+
 //with pagination
 // export const getAllChannelsService = async (req) => {
 //   try {

@@ -13,6 +13,7 @@ import {
   getChannelMessagesByChannelId,
   getComments,
   getLatestMessagesInChannel,
+  joinChannelByInvitation,
   joinMemberToChannel,
   leaveMemberFromChannel,
   removeAdminFromChannel,
@@ -62,5 +63,8 @@ router.post("/join-member", joinMemberToChannel);
 
 //leave member
 router.post("/leave-member", leaveMemberFromChannel);
+
+//join channel by invitation
+router.post("/join-channel-by-invite", joinChannelByInvitation);
 
 export default router;
