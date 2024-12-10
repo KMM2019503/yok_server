@@ -404,6 +404,7 @@ export const addMemberToGroupService = async (req) => {
     const newMembers = memberIds.filter(
       (id) => !existingMemberIds.includes(id)
     );
+    
 
     if (newMembers.length === 0) {
       return {
@@ -418,11 +419,18 @@ export const addMemberToGroupService = async (req) => {
       groupId: groupId,
     }));
 
-    // Add new members to the group in a single transaction
-    await prisma.$transaction(async (prisma) => {
-      await prisma.groupMember.createMany({
-        data: membersData,
-      });
+    const joinNewMembers = await prisma.groupMember.createMany({
+      data: membersData,
+    });
+
+    const addedMembers = await prisma.groupMember.findMany({
+      where: {
+        groupId: groupId,
+        userId: { in: newMembers },
+      },
+      includes: {
+        user: ture
+      }
     });
 
     // Batch socket join operations
@@ -434,12 +442,12 @@ export const addMemberToGroupService = async (req) => {
     // Notify all users in the group room about the new members
     io.to(groupId).emit("membersAdded", {
       groupId,
-      newMemberIds: newMembers,
+      newMembers: addedMembers,
     });
 
     return {
       success: true,
-      message: "Members have been successfully added to the group",
+      newMembers: addedMembers,
     };
   } catch (error) {
     logger.error("Error adding members to group:", {
