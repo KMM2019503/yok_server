@@ -474,9 +474,16 @@ export const addMemberToChannelService = async (req) => {
           select: {
             id: true,
             userName: true,
+            phone: true,
+            profilePictureUrl: true,
           },
         },
       },
+    });
+
+    io.to(channelId).emit("channelMembersAdded", {
+      channelId,
+      newMembers: addedUsers,
     });
 
     logger.info(

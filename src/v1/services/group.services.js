@@ -284,7 +284,7 @@ export const joinGroupService = async (req) => {
     }
 
     // Notify all users in the group room
-    io.to(groupId).emit("newMemberJoined", {
+    io.to(groupId).emit("groupMembersJoined", {
       groupId,
       userId: userid,
     });
@@ -432,6 +432,8 @@ export const addMemberToGroupService = async (req) => {
           select: {
             id: true,
             userName: true,
+            phone: true,
+            profilePictureUrl: true,
           },
         },
       },
@@ -444,7 +446,7 @@ export const addMemberToGroupService = async (req) => {
     });
 
     // Notify all users in the group room about the new members
-    io.to(groupId).emit("membersAdded", {
+    io.to(groupId).emit("groupMembersAdded", {
       groupId,
       newMembers: addedMembers,
     });
