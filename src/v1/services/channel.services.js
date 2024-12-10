@@ -464,6 +464,21 @@ export const addMemberToChannelService = async (req) => {
       data: channelMembersData,
     });
 
+    const addedUsers = await prisma.channelMember.findMany({
+      where: {
+        channelId,
+        userId: { in: newMemberIds },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            userName: true,
+          },
+        },
+      },
+    });
+
     logger.info(
       `Members added successfully: ${newMemberIds} to channel ${channelId}`
     );
@@ -471,7 +486,7 @@ export const addMemberToChannelService = async (req) => {
     return {
       success: true,
       message: "Members added successfully",
-      newMembers: newMemberIds,
+      newMembers: addedUsers,
     };
   } catch (error) {
     logger.error("🚀 ~ addMemberToChannel ~ error:", error);
