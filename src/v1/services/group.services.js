@@ -418,11 +418,23 @@ export const addMemberToGroupService = async (req) => {
       groupId: groupId,
     }));
 
-    // Add new members to the group in a single transaction
-    await prisma.$transaction(async (prisma) => {
-      await prisma.groupMember.createMany({
-        data: membersData,
-      });
+    const joinNewMembers = await prisma.groupMember.createMany({
+      data: membersData,
+    });
+
+    const addedMembers = await prisma.groupMember.findMany({
+      where: {
+        groupId: groupId,
+        userId: { in: newMembers },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            userName: true,
+          },
+        },
+      },
     });
 
     // Batch socket join operations
@@ -434,12 +446,12 @@ export const addMemberToGroupService = async (req) => {
     // Notify all users in the group room about the new members
     io.to(groupId).emit("membersAdded", {
       groupId,
-      newMemberIds: newMembers,
+      newMembers: addedMembers,
     });
 
     return {
       success: true,
-      message: "Members have been successfully added to the group",
+      newMembers: addedMembers,
     };
   } catch (error) {
     logger.error("Error adding members to group:", {
@@ -452,17 +464,17 @@ export const addMemberToGroupService = async (req) => {
 
 export const removeMemberFromGroupService = async (req) => {
   const { userid } = req.headers; // ID of the user making the request
-  const { groupId, memberId } = req.body; // ID of the group and ID of the member to be removed
+  const { groupId, memberIds } = req.body; // ID of the group and IDs of the members to be removed
 
   // Validate input
   if (!userid) {
-    throw new Error("User  ID is required");
+    throw new Error("User ID is required");
   }
   if (!groupId) {
     throw new Error("Group ID is required");
   }
-  if (!memberId) {
-    throw new Error("Member ID is required");
+  if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
+    throw new Error("A list of member IDs is required");
   }
 
   try {
@@ -480,48 +492,56 @@ export const removeMemberFromGroupService = async (req) => {
       throw new Error("Only the group creator can remove members");
     }
 
-    // Check if the member exists in the group
-    const member = await prisma.groupMember.findUnique({
+    // Check which members exist in the group in one query
+    const existingMembers = await prisma.groupMember.findMany({
       where: {
-        userId_groupId: {
-          userId: memberId,
-          groupId: groupId,
-        },
+        groupId: groupId,
+        userId: { in: memberIds },
       },
+      select: { userId: true },
     });
 
-    if (!member) {
-      throw new Error("Member not found in this group");
+    const existingMemberIds = existingMembers.map((member) => member.userId);
+    const membersToRemove = memberIds.filter((id) =>
+      existingMemberIds.includes(id)
+    );
+
+    if (membersToRemove.length === 0) {
+      return {
+        success: true,
+        message: "No members to remove, none are part of the group.",
+      };
     }
 
-    // Remove the member from the group
-    await prisma.groupMember.delete({
+    // Remove the members from the group
+    await prisma.groupMember.deleteMany({
       where: {
-        userId_groupId: {
-          userId: memberId,
-          groupId: groupId,
-        },
+        groupId: groupId,
+        userId: { in: membersToRemove },
       },
     });
 
-    // Notify all users in the group room about the member leaving
-    io.to(groupId).emit("memberRemoved", {
+    // Notify all users in the group room about the removed members
+    io.to(groupId).emit("membersRemoved", {
       groupId,
-      memberId,
+      removedMembers: membersToRemove,
     });
 
-    // Optionally, if you want to remove the member from the socket room
-    const memberSocketId = getReceiverSocketId(memberId);
-    if (memberSocketId) {
-      io.sockets.sockets.get(memberSocketId)?.leave(groupId);
-    }
+    // Batch socket leave operations
+    const memberSocketIds = membersToRemove
+      .map(getReceiverSocketId)
+      .filter(Boolean);
+    memberSocketIds.forEach((socketId) => {
+      io.sockets.sockets.get(socketId)?.leave(groupId);
+    });
 
     return {
       success: true,
-      message: "Member has been successfully removed from the group",
+      removedMembers: membersToRemove,
+      message: "Members have been successfully removed from the group.",
     };
   } catch (error) {
-    logger.error("Error removing member from group:", {
+    logger.error("Error removing members from group:", {
       message: error.message,
       stack: error.stack,
     });
