@@ -19,6 +19,9 @@ export const createChannelSchema = Joi.object({
     "array.base": "Admins should be an array of user IDs.",
     "string.base": "Each admin ID should be a string.",
   }),
+  isCommentAllowed: Joi.boolean().default(false).messages({
+    "boolean.base": "isCommentAllowed should be a boolean value.",
+  }),
 });
 
 export const updateChannelSchema = Joi.object({
@@ -38,5 +41,8 @@ export const updateChannelSchema = Joi.object({
   adminIds: Joi.array().items(Joi.string()).optional().messages({
     "array.base": "Admins should be an array of user IDs.",
     "string.base": "Each admin ID should be a string.",
+  }),
+  isCommentAllowed: Joi.boolean().default(false).messages({
+    "boolean.base": "isCommentAllowed should be a boolean value.",
   }),
 });

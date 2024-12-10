@@ -17,7 +17,14 @@ export const createChannelService = async (req) => {
     }
 
     // Destructure channel information from the body
-    const { name, description, isPublic, profilePictureUrl, adminIds } = body;
+    const {
+      name,
+      description,
+      isPublic,
+      profilePictureUrl,
+      adminIds,
+      isCommentAllowed,
+    } = body;
 
     const membersData =
       adminIds && Array.isArray(adminIds)
@@ -37,6 +44,7 @@ export const createChannelService = async (req) => {
         superAdminId: userid,
         adminIds: adminIds ?? [], // Use an empty array if no admin IDs are provided
         lastActivity: new Date(),
+        isCommentAllowed: isCommentAllowed ?? false,
         members: {
           create: membersData, // Add multiple members including the creator
         },
@@ -227,7 +235,8 @@ export const updateChannelService = async (req) => {
     }
 
     // Destructure the data to update
-    const { name, description, isPublic, profilePictureUrl } = body;
+    const { name, description, isPublic, profilePictureUrl, isCommentAllowed } =
+      body;
 
     // Update the channel with the provided data
     const updatedChannel = await prisma.channel.update({
@@ -237,6 +246,7 @@ export const updateChannelService = async (req) => {
         ...(description && { description }),
         ...(isPublic !== undefined && { isPublic }),
         ...(profilePictureUrl && { profilePictureUrl }),
+        ...(isCommentAllowed && { isCommentAllowed }),
       },
     });
 

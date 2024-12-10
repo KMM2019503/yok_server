@@ -163,6 +163,7 @@ model Channel {
   pinnedItems       PinnedItem[]
   messages          Message[]
   lastMessage       LastMessage?
+  isCommentAllowed  Boolean         @default(false)
   createdBy         User            @relation("CreatedChannels", fields: [createdById], references: [id])
   createdById       String          @db.ObjectId
   superAdmin        User            @relation("SuperAdminChannels", fields: [superAdminId], references: [id])
