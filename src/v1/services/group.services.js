@@ -650,6 +650,8 @@ export const getLatestMessagesInGroupsService = async (req) => {
             status: true,
             createdAt: true,
             groupId: true,
+            messageType: true,
+            references: true,
             sender: {
               select: {
                 id: true,

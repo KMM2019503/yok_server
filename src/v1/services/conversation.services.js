@@ -235,6 +235,8 @@ export const getLatestMessagesInConversationsService = async (req) => {
             status: true,
             createdAt: true,
             conversationId: true,
+            messageType: true,
+            references: true,
             sender: {
               select: {
                 id: true,

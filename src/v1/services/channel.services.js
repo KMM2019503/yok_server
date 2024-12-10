@@ -776,6 +776,8 @@ export const getLatestMessagesInChannelsService = async (req) => {
             status: true,
             createdAt: true,
             channelId: true,
+            messageType: true,
+            references: true,
             _count: {
               select: {
                 comments: true,
