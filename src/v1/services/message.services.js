@@ -238,14 +238,29 @@ const getOrCreateConversation = async (
 
 export const sendChannelInvitationService = async (req) => {
   const { userid } = req.headers;
-  const { receiverIds, channelId } = req.body;
+  const { phoneNumbers, channelId } = req.body;
 
-  if (!receiverIds || receiverIds.length === 0) {
+  if (!phoneNumbers || phoneNumbers.length === 0) {
     throw new Error("No receivers provided");
   }
 
   try {
     const now = new Date();
+
+    const receivers = await prisma.user.findMany({
+      where: {
+        phone: {
+          in: phoneNumbers,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    const receiverIds = receivers.map((receiver) => receiver.id);
+
+    logger.debug({ receiverIds });
 
     // Step 1: Iterate over each receiver to find or create conversations
     const messages = await Promise.all(
@@ -319,6 +334,17 @@ export const sendChannelInvitationService = async (req) => {
           });
         });
 
+        const channel = await prisma.channel.findUnique({
+          where: { id: channelId },
+          select: {
+            id: true,
+            name: true,
+            profilePictureUrl: true,
+          },
+        });
+
+        logger.debug({ channel });
+
         // Step 2: Create a channel invitation message in the conversation
         const message = await prisma.message.create({
           data: {
@@ -327,7 +353,9 @@ export const sendChannelInvitationService = async (req) => {
             conversationId: conversation.id,
             messageType: "CHANNEL_INVITATION",
             references: {
-              channelId,
+              channelId: channel.id,
+              channelName: channel.name,
+              imageUrl: channel.profilePictureUrl,
             },
             status: {
               status: "SENT",

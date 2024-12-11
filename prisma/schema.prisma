@@ -112,6 +112,8 @@ enum MessageType {
 
 type References {
   channelId          String?
+  channelName        String?
+  imageUrl           String?
   originalMessageId  String?
   originalSenderId   String?
   fromConversationId String?
