@@ -350,7 +350,7 @@ export const sendChannelInvitationService = async (req) => {
         const message = await prisma.message.create({
           data: {
             senderId: userid,
-            content: `You have been invited to join channel.`,
+            content: `Channel Invitation.`,
             conversationId: conversation.id,
             messageType: "CHANNEL_INVITATION",
             references: {
@@ -387,7 +387,7 @@ export const sendChannelInvitationService = async (req) => {
           where: { id: conversation.id },
           data: {
             lastMessage: {
-              content: "You have been invited to join channel.",
+              content: "Channel Invitation",
               senderId: userid,
               createdAt: now,
             },
