@@ -53,6 +53,7 @@ export const sendDmMessageService = async (req) => {
             fileUrls: true,
             status: true,
             createdAt: true,
+            messageType: true,
             conversationId: true,
             sender: {
               select: {
@@ -453,6 +454,7 @@ export const sendGroupMessageService = async (req) => {
           fileUrls: true,
           status: true,
           createdAt: true,
+          messageType: true,
           groupId: true,
           sender: {
             select: {
@@ -579,6 +581,7 @@ export const sendChannelMessageService = async (req) => {
           status: true,
           createdAt: true,
           channelId: true,
+          messageType: true,
           sender: {
             select: {
               id: true,
