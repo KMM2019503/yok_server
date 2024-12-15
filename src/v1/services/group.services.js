@@ -212,6 +212,7 @@ export const createGroupService = async (req) => {
         isPublic: isPublic || false, // Defaults to false if not provided
         profilePictureUrl: profilePictureUrl || "example.profile.picture",
         createdById: userid,
+        adminId: userid,
         members: {
           create: membersData, // Add multiple members including the creator
         },
@@ -256,6 +257,100 @@ export const createGroupService = async (req) => {
       stack: error.stack,
     });
     throw new Error("Failed to create group");
+  }
+};
+
+const updateGroupService = async (req) => {
+  const { userId } = req.headers;
+  const { groupId } = req.params;
+  const { name, description, profilePictureUrl } = req.body;
+
+  if (!userId || !groupId) {
+    throw new Error("User ID and Group ID are required.");
+  }
+
+  // Validate input
+  if (!name && !description && typeof isPublic !== "boolean") {
+    throw new Error(
+      "At least one field (name, description, or isPublic) must be provided for update."
+    );
+  }
+
+  const group = await prisma.group.findUnique({
+    where: { id: groupId },
+    select: { id: true, createdBy: true },
+  });
+
+  if (!group) {
+    throw new Error("Group not found.");
+  }
+
+  if (group.createdBy !== userId) {
+    throw new Error("You are not authorized to update this group.");
+  }
+
+  const updatedGroup = await prisma.group.update({
+    where: { id: groupId },
+    data: {
+      ...(name && { name }),
+      ...(description && { description }),
+      ...(profilePictureUrl && { profilePictureUrl }),
+    },
+  });
+
+  io.to(groupId).emit("groupUpdated", {
+    groupId,
+    group: updatedGroup,
+  });
+
+  return { message: "Group updated successfully.", updatedGroup };
+};
+
+export const deleteGroupService = async (req) => {
+  const { userid } = req.headers;
+  const { groupId } = req.params;
+
+  if (!userid) throw new Error("User ID is required.");
+  if (!groupId) throw new Error("Group ID is required.");
+
+  try {
+    // Check if the group exists and is created by the user
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+    });
+
+    if (!group) throw new Error("Group not found.");
+
+    if (group.adminId !== userid) {
+      throw new Error("You are not authorized to delete this group.");
+    }
+
+    // Delete all related records in a transaction
+    await prisma.$transaction([
+      // Delete all group memebers
+      prisma.groupMember.delteMany({
+        where: { groupId },
+      }),
+
+      // Delete all messages in the group
+      prisma.message.deleteMany({
+        where: { groupId: group.id },
+      }),
+
+      // Delete the group itself
+      prisma.group.delete({
+        where: { id: groupId },
+      }),
+    ]);
+    io.to(groupId).emit("groupDeleted", {
+      groupId,
+    });
+    return {
+      message: "Group and all related data have been successfully deleted.",
+      groupId,
+    };
+  } catch (error) {
+    throw new Error(`Failed to delete group: ${error.message}`);
   }
 };
 
@@ -310,6 +405,7 @@ export const joinGroupService = async (req) => {
 export const leaveGroupService = async (req) => {
   const { userid } = req.headers;
   const { groupId } = req.params;
+  const { transferedUserId } = req.body;
 
   // Validate input
   if (!userid) {
@@ -320,6 +416,32 @@ export const leaveGroupService = async (req) => {
   }
 
   try {
+    const group = await prisma.group.findUnique({
+      where: {
+        id: groupId,
+        createdById: userid,
+      },
+      include: {
+        members: true,
+      },
+    });
+
+    if (!group) {
+      throw new Error("Group not found.");
+    }
+
+    //this is the case that the creator of the group is leaving
+    if (transferedUserId) {
+      const updateGroup = await prisma.group.update({
+        where: {
+          id: groupId,
+        },
+        data: {
+          adminId: transferedUserId,
+        },
+      });
+    }
+
     // Attempt to remove the user from the group
     const deletedMember = await prisma.groupMember.deleteMany({
       where: {
@@ -330,15 +452,12 @@ export const leaveGroupService = async (req) => {
 
     // Check if the user was actually a member
     if (deletedMember.count === 0) {
-      throw new Error("User  is not a member of this group");
+      throw new Error("User is not a member of this group");
     }
 
     // Emit an event to notify group members about the user leaving
     const memberSocketId = getReceiverSocketId(userid);
     if (memberSocketId) {
-      // Emit to the user that they have left the group
-      io.to(memberSocketId).emit("groupLeft", { groupId, userId: userid });
-      // Remove the user from the group room
       io.sockets.sockets.get(memberSocketId)?.leave(groupId);
     }
 

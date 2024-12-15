@@ -27,6 +27,7 @@ model User {
   channelMembers      ChannelMember[]
   groupMembers        GroupMember[]
   CreatedGroups       Group[]              @relation("CreatedGroups")
+  GroupAdmin          Group[]              @relation("GroupAdmin")
   contacts            Contact[]            @relation("UserContacts")
   addedContacts       Contact[]            @relation("AddedContacts")
   pinnedItems         PinnedItem[]
@@ -73,6 +74,8 @@ model Group {
   lastMessage       LastMessage?
   createdBy         User          @relation("CreatedGroups", fields: [createdById], references: [id])
   createdById       String        @db.ObjectId
+  admin             User          @relation("GroupAdmin", fields: [adminId], references: [id])
+  adminId           String        @db.ObjectId
   members           GroupMember[]
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
