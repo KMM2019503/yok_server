@@ -23,7 +23,7 @@ export const updateUserService = async (req) => {
         phone: body.phone,
         userName: body.userName,
         email: body.email,
-        dateOfBirth: new Date(body.dateOfBirth),
+        // dateOfBirth: new Date(body.dateOfBirth),
         profilePictureUrl: body.profilePictureUrl,
         updatedAt: new Date(), // Update the updatedAt timestamp
       },
