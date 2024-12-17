@@ -10,6 +10,10 @@ import applyMiddlewares from "./v1/middlewares";
 import cookieParser from "cookie-parser";
 import { app, server } from "../socket/Socket.js";
 import prisma, { connectToDatabase } from "../prisma/prismaClient.js";
+// @ts-ignore
+import cron from "node-cron";
+import { deleteStaleFcmTokenServices } from "./v1/services/commonService.js";
+
 
 dotenv.config(); // Load environment variables
 
@@ -52,6 +56,10 @@ const startServer = async() => {
   // Start the server
   server.listen(port, () => {
     logger.info(`Server is running on port ${port}`);
+  });
+
+  cron.schedule("0 3 * * *", async() => {
+    await deleteStaleFcmTokenServices();
   });
 
   // Handle graceful shutdown
