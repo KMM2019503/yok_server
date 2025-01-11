@@ -55,86 +55,6 @@ export const getAllConversationsService = async (req) => {
   }
 };
 
-export const getConversationMessagesService = async (req, res) => {
-  try {
-    const { userid } = req.headers;
-    const { conversationId } = req.params;
-    const { messageId, take } = req.query; // Only keep messageId for conditional queries
-
-    // Define the base query for fetching messages
-    const messagesQuery = {
-      orderBy: {
-        createdAt: "desc", // Order messages by creation date, most recent first
-      },
-      take: parseInt(take) || 25,
-      select: {
-        id: true,
-        content: true,
-        photoUrl: true,
-        fileUrls: true,
-        status: true,
-        messageType: true,
-        references: true,
-        createdAt: true,
-        conversationId: true,
-        sender: {
-          select: {
-            id: true,
-            userName: true,
-            phone: true,
-            profilePictureUrl: true,
-          },
-        },
-      },
-    };
-
-    if (messageId) {
-      messagesQuery.where = {
-        conversationId,
-        id: {
-          lt: messageId,
-        },
-      };
-    } else {
-      // If no messageId is provided, fetch the latest messages in the conversation
-      messagesQuery.where = { conversationId };
-    }
-
-    console.log(
-      "🚀 ~ getConversationMessagesService ~ messagesQuery:",
-      messagesQuery
-    );
-
-    // Fetch the conversation where the user is a member
-    const conversation = await prisma.conversation.findUnique({
-      where: {
-        id: conversationId,
-        members: {
-          some: {
-            userId: userid,
-          },
-        },
-      },
-      include: {
-        messages: messagesQuery,
-        lastMessage: true,
-        pinnedItems: true,
-      },
-    });
-
-    if (!conversation) {
-      throw new Error(`Conversation not found or you are not a member.`);
-    }
-
-    return {
-      success: true,
-      conversation,
-    };
-  } catch (error) {
-    throw error;
-  }
-};
-
 export const getConversationService = async (req) => {
   try {
     const { userid } = req.headers;
@@ -261,6 +181,146 @@ export const getLatestMessagesInConversationsService = async (req) => {
     };
   } catch (error) {
     throw error;
+  }
+};
+
+export const getConversationMessagesService = async (req, res) => {
+  try {
+    const { userid } = req.headers;
+    const { conversationId } = req.params;
+    const { messageId, take } = req.query; // Only keep messageId for conditional queries
+
+    // Define the base query for fetching messages
+    const messagesQuery = {
+      orderBy: {
+        createdAt: "desc", // Order messages by creation date, most recent first
+      },
+      take: parseInt(take) || 25,
+      select: {
+        id: true,
+        content: true,
+        photoUrl: true,
+        fileUrls: true,
+        status: true,
+        messageType: true,
+        references: true,
+        createdAt: true,
+        conversationId: true,
+        sender: {
+          select: {
+            id: true,
+            userName: true,
+            phone: true,
+            profilePictureUrl: true,
+          },
+        },
+      },
+    };
+
+    if (messageId) {
+      messagesQuery.where = {
+        conversationId,
+        id: {
+          lt: messageId,
+        },
+      };
+    } else {
+      // If no messageId is provided, fetch the latest messages in the conversation
+      messagesQuery.where = { conversationId };
+    }
+
+    console.log(
+      "🚀 ~ getConversationMessagesService ~ messagesQuery:",
+      messagesQuery
+    );
+
+    // Fetch the conversation where the user is a member
+    const conversation = await prisma.conversation.findUnique({
+      where: {
+        id: conversationId,
+        members: {
+          some: {
+            userId: userid,
+          },
+        },
+      },
+      include: {
+        messages: messagesQuery,
+        lastMessage: true,
+        pinnedItems: true,
+      },
+    });
+
+    if (!conversation) {
+      throw new Error(`Conversation not found or you are not a member.`);
+    }
+
+    return {
+      success: true,
+      conversation,
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getAllFileUrlsService = async (req) => {
+  try {
+    const { userid } = req.headers;
+    const { FileUrlsId, conversationId } = req.query;
+
+    console.log("🚀 ~ getAllFileUrlsService ~ conversationId:", conversationId);
+    console.log("🚀 ~ getAllFileUrlsService ~ FileUrlsId:", FileUrlsId);
+
+    if (!userid) {
+      throw new Error("User ID is required");
+    }
+
+    if (!conversationId) {
+      throw new Error("Conversation ID is required");
+    }
+
+    // Initialize the query object
+    const fileUrlQuery = {
+      where: {
+        conversationId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 15,
+    };
+
+    // Handle FileUrlsId for pagination
+    if (FileUrlsId) {
+      if (!ObjectId.isValid(FileUrlsId)) {
+        throw new Error("Invalid FileUrlsId format");
+      }
+
+      const objectIdTimestamp = ObjectId(FileUrlsId).getTimestamp();
+
+      fileUrlQuery.where = {
+        ...fileUrlQuery.where,
+        createdAt: {
+          lt: objectIdTimestamp, // Compare using the extracted timestamp
+        },
+      };
+    }
+
+    console.log("🚀 ~ getAllFileUrlsService ~ fileUrlQuery:", fileUrlQuery);
+
+    // Fetch file URLs from the database
+    const fileUrls = await prisma.fileUrls.findMany(fileUrlQuery);
+
+    // Return response
+    return {
+      success: true,
+      fileUrls,
+    };
+  } catch (error) {
+    // Log error and rethrow
+    console.error("Error fetching file URLs:", error);
+    throw new Error("Failed to fetch file URLs. Please try again later.");
   }
 };
 

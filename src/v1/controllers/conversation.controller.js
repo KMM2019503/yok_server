@@ -1,5 +1,6 @@
 import {
   getAllConversationsService,
+  getAllFileUrlsService,
   getConversationMessagesService,
   getConversationService,
   getLatestMessagesInConversationsService,
@@ -57,6 +58,15 @@ export const getLatestMessagesInConversations = async (req, res) => {
         stack: error.stack,
       }
     );
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getAllFileUrls = async (req, res) => {
+  try {
+    const response = await getAllFileUrlsService(req);
+    res.status(200).json(response);
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };

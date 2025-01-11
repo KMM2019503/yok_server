@@ -8,17 +8,6 @@ generator client {
   binaryTargets = ["native", "linux-arm64-openssl-1.1.x"]
 }
 
-model fileUrls {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  url            String
-  messageId      String   @db.ObjectId
-  conversationId String?  @db.ObjectId
-  groupdId       String?  @db.ObjectId
-  channelId      String?  @db.ObjectId
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-}
-
 model User {
   id                  String               @id @default(auto()) @map("_id") @db.ObjectId
   firebaseUserId      String               @unique @map("firebase_user_id")
@@ -56,6 +45,7 @@ model Conversation {
   messages     Message[]
   lastMessage  LastMessage?
   pinnedItems  PinnedItem[]
+  fileUrls     fileUrls[]           @relation("ConversationFileUrls")
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt
   lastActivity DateTime             @default(now())
@@ -89,6 +79,7 @@ model Group {
   admin             User          @relation("GroupAdmin", fields: [adminId], references: [id])
   adminId           String        @db.ObjectId
   members           GroupMember[]
+  fileUrls          fileUrls[]    @relation("GroupFileUrls")
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   lastActivity      DateTime      @default(now())
@@ -125,16 +116,6 @@ enum MessageType {
   REPLY
 }
 
-type References {
-  channelId          String?
-  channelName        String?
-  imageUrl           String?
-  originalMessageId  String?
-  originalSenderId   String?
-  fromConversationId String?
-  fromChannelId      String?
-}
-
 model Message {
   id             String        @id @default(auto()) @map("_id") @db.ObjectId
   sender         User          @relation("SentMessages", fields: [senderId], references: [id])
@@ -156,6 +137,16 @@ model Message {
   updatedAt      DateTime      @updatedAt
 
   @@map("messages")
+}
+
+type References {
+  channelId          String?
+  channelName        String?
+  imageUrl           String?
+  originalMessageId  String?
+  originalSenderId   String?
+  fromConversationId String?
+  fromChannelId      String?
 }
 
 model Comment {
@@ -188,11 +179,28 @@ model Channel {
   admin             User            @relation("AdminChannels", fields: [adminIds], references: [id])
   adminIds          String[]        @db.ObjectId
   members           ChannelMember[]
+  fileUrls          fileUrls[]      @relation("ChannelFileUrls")
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   lastActivity      DateTime        @default(now())
 
   @@map("channels")
+}
+
+model fileUrls {
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  url            String
+  messageId      String        @db.ObjectId
+  conversation   Conversation? @relation("ConversationFileUrls", fields: [conversationId], references: [id])
+  conversationId String?       @db.ObjectId
+  group          Group?        @relation("GroupFileUrls", fields: [groupId], references: [id])
+  groupId        String?       @db.ObjectId
+  channel        Channel?      @relation("ChannelFileUrls", fields: [channelId], references: [id])
+  channelId      String?       @db.ObjectId
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@map("fileurls")
 }
 
 model ChannelMember {

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { checkToken } from "../middlewares/checkAuth";
 import {
   getAllConversations,
+  getAllFileUrls,
   getConversation,
   getConversationMessages,
   getLatestMessagesInConversations,
@@ -26,5 +27,7 @@ router.get("/:conversationId/messages", getConversationMessages);
 // get conversations by conversation id
 
 router.get("/:conversationId", getConversation);
+
+router.get("/file-urls/getAllFileUrls", getAllFileUrls);
 
 export default router;

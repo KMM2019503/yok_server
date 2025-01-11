@@ -15,6 +15,7 @@ export const sendDmMessageService = async (req) => {
     originalMessageId,
   } = req.body;
 
+  console.log("🚀 ~ sendDmMessageService ~ photoUrl 1:", photoUrl);
   const now = new Date();
   const maxLength = 30;
   let truncatedContent =
@@ -64,6 +65,7 @@ export const sendDmMessageService = async (req) => {
             createdAt: true,
             messageType: true,
             conversationId: true,
+            references: true,
             sender: {
               select: {
                 id: true,
@@ -74,15 +76,6 @@ export const sendDmMessageService = async (req) => {
             },
           },
         });
-
-        if (fileUrls.length > 0 || photoUrl.length > 0) {
-          await prismaClient.fileUrls.createMany({
-            data: fileUrls.map((url) => ({
-              url,
-              messageId: message.id,
-            })),
-          });
-        }
 
         console.log("🚀 ~ sendDmMessageService ~ conversation Final Updating");
         return { message, conversation };
@@ -121,6 +114,17 @@ export const sendDmMessageService = async (req) => {
                 },
                 lastActivity: now,
               },
+            });
+          }
+          const validPhotoUrls = photoUrl.map((url) => ({
+            url,
+            messageId: message.id,
+            conversationId: conversation.id,
+          }));
+
+          if (validPhotoUrls.length > 0) {
+            await prismaClient.fileUrls.createMany({
+              data: validPhotoUrls,
             });
           }
         });
@@ -519,6 +523,16 @@ export const sendGroupMessageService = async (req) => {
               },
             });
           }
+
+          if (photoUrl.length > 0) {
+            await prismaClient.fileUrls.createMany({
+              data: photoUrl.map((url) => ({
+                url,
+                messageId: message.id,
+                groupId: message.group.id,
+              })),
+            });
+          }
         });
 
         // Emit message to receiver
@@ -560,6 +574,7 @@ export const sendGroupMessageService = async (req) => {
 export const sendChannelMessageService = async (req) => {
   const { userid } = req.headers;
   const { content, channelId, photoUrl = [], fileUrls = [] } = req.body;
+  console.log("🚀 ~ sendChannelMessageService ~ photoUrl:", photoUrl);
 
   const now = new Date();
   const maxLength = 30;
@@ -643,6 +658,18 @@ export const sendChannelMessageService = async (req) => {
                 },
                 lastActivity: now,
               },
+            });
+          }
+
+          console.log("here");
+          console.log("🚀 ~ awaitprisma.$transaction ~ photoUrl:", photoUrl);
+          if (photoUrl.length > 0) {
+            await prismaClient.fileUrls.createMany({
+              data: photoUrl.map((url) => ({
+                url,
+                messageId: message.id,
+                channelId: message.channel.id,
+              })),
             });
           }
         });

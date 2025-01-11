@@ -19,10 +19,11 @@ import logger from "../utils/logger.js";
 
 export const createChannel = async (req, res) => {
   try {
+    console.log("Reached Controller");
     const response = await createChannelService(req);
     res.status(201).json(response);
   } catch (error) {
-    logger.error("Error occurred during user create:", {
+    logger.error("Error occurred during create channel:", {
       message: error.message,
       stack: error.stack,
     });

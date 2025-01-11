@@ -25,7 +25,6 @@ export const createChannelService = async (req) => {
       adminIds,
       isCommentAllowed,
     } = body;
-
     const membersData =
       adminIds && Array.isArray(adminIds)
         ? adminIds.map((id) => ({ userId: id }))
@@ -37,7 +36,7 @@ export const createChannelService = async (req) => {
     const newChannel = await prisma.channel.create({
       data: {
         name,
-        description,
+        description: description || "",
         isPublic: isPublic ?? true, // Use the provided value or default to true
         profilePictureUrl,
         createdById: userid,
