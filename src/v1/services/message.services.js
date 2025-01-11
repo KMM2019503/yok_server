@@ -12,6 +12,7 @@ export const sendDmMessageService = async (req) => {
     photoUrl = [],
     fileUrls = [],
     receiverId,
+    originalMessageId,
   } = req.body;
 
   const now = new Date();
@@ -34,18 +35,26 @@ export const sendDmMessageService = async (req) => {
           receiverId
         );
 
-        const message = await prismaClient.message.create({
-          data: {
-            senderId: userid,
-            content,
-            conversationId: conversation.id,
-            photoUrl: photoUrl || [],
-            fileUrls: fileUrls || [],
-            status: {
-              status: "SENT", // Enum value from MessageStatus
-              seenUserIds: [], // Initialize as an empty array
-            },
+        const data = {
+          senderId: userid,
+          content,
+          conversationId: conversation.id,
+          photoUrl: photoUrl || [],
+          fileUrls: fileUrls || [],
+          status: {
+            status: "SENT", // Enum value from MessageStatus
+            seenUserIds: [], // Initialize as an empty array
           },
+        };
+
+        if (originalMessageId) {
+          data.references = {
+            originalMessageId,
+          };
+        }
+
+        const message = await prismaClient.message.create({
+          data,
           select: {
             id: true,
             content: true,
@@ -65,6 +74,15 @@ export const sendDmMessageService = async (req) => {
             },
           },
         });
+
+        if (fileUrls.length > 0 || photoUrl.length > 0) {
+          await prismaClient.fileUrls.createMany({
+            data: fileUrls.map((url) => ({
+              url,
+              messageId: message.id,
+            })),
+          });
+        }
 
         console.log("🚀 ~ sendDmMessageService ~ conversation Final Updating");
         return { message, conversation };

@@ -8,6 +8,17 @@ generator client {
   binaryTargets = ["native", "linux-arm64-openssl-1.1.x"]
 }
 
+model fileUrls {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  url            String
+  messageId      String   @db.ObjectId
+  conversationId String?  @db.ObjectId
+  groupdId       String?  @db.ObjectId
+  channelId      String?  @db.ObjectId
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
 model User {
   id                  String               @id @default(auto()) @map("_id") @db.ObjectId
   firebaseUserId      String               @unique @map("firebase_user_id")
@@ -32,6 +43,7 @@ model User {
   addedContacts       Contact[]            @relation("AddedContacts")
   pinnedItems         PinnedItem[]
   comments            Comment[]
+  blockedUserIds      String[]             @db.ObjectId
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
