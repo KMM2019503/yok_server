@@ -18,7 +18,7 @@ import { deleteStaleFcmTokenServices } from "./v1/services/commonService.js";
 dotenv.config(); // Load environment variables
 
 // Validate environment variables
-const port = parseInt(process.env.PORT || "3000", 10);
+const port = parseInt(process.env.PORT || "8888", 10);
 if (isNaN(port)) {
   logger.error("Invalid PORT environment variable");
   process.exit(1); // Exit if port is invalid
