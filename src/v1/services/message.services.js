@@ -1,7 +1,6 @@
 // message.services.js
 import logger from "../utils/logger";
 import { getReceiverSocketId, io } from "../../../socket/Socket";
-import { sendNotification } from "../utils/notifications/noti";
 import prisma from "../../../prisma/prismaClient";
 
 export const sendDmMessageService = async (req) => {

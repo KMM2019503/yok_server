@@ -1,66 +1,134 @@
 import prisma from "../../../prisma/prismaClient";
 import logger from "../utils/logger";
-import admin from "../utils/firebase";
 import { removeSpacingOnPhoneNumber } from "../utils/helper";
+import { generateJwtTokenAndSetCookie } from "../utils/generateJwtTokenAndSetCookie.utils";
+import bcrypt from "bcryptjs";
 
 export const login = async (req, res) => {
   try {
-    // const { error } = loginSchema.validate(req.headers, { abortEarly: false });
+    const { email, password } = req.body;
 
-    // if (error) {
-    //   const validationErrors = error.details.map((detail) => detail.message);
-    //   logger.error("login ~ validationErrors:", validationErrors);
-    //   throw new ValidationError(validationErrors.join(", "));
-    // }
-
-    const authHeader = req.headers.authorization; // Extract the Authorization header
-    const authToken = authHeader.split(" ")[1];
-
-    // Verify Firebase ID token
-    const decodedToken = await admin.auth().verifyIdToken(authToken);
-    const { uid, phone_number } = decodedToken;
-
-    const PhoneNumber = removeSpacingOnPhoneNumber(phone_number);
-
-    // Check if the user exists in the database
-    let existingUser = await prisma.user.findUnique({
-      where: { firebaseUserId: uid },
-      select: {
-        id: true,
-        phone: true,
-        userName: true,
-        firebaseUserId: true,
-        profilePictureUrl: true,
-      },
-    });
-
-    if (!existingUser) {
-      // Create a new user if they do not exist
-      existingUser = await prisma.user.create({
-        data: {
-          firebaseUserId: uid,
-          phone: PhoneNumber,
-          // Add additional fields if needed
-        },
-        select: {
-          id: true,
-          phone: true,
-          userName: true,
-          firebaseUserId: true,
-          profilePictureUrl: true,
-        },
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: "Email and password are required",
       });
     }
 
-    return {
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: "Invalid email or password",
+      });
+    }
+
+    // Compare password
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        error: "Invalid email or password",
+      });
+    }
+
+    
+    const token = generateJwtTokenAndSetCookie(user, password);
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 3 * 60 * 1000, 
+      sameSite: "Strict",
+    });
+
+    return res.status(200).json({
       success: true,
-      user: existingUser,
-    };
+      user,
+    });
   } catch (err) {
     logger.error("login ~ error:", err);
-    return {
+    return res.status(500).json({
       success: false,
-      error: err,
+      error: "Internal server error",
+    });
+  }
+};
+
+export const signUp = async (userData, res) => {
+  try {
+    const { userName, profilePictureUrl, email, gender, dob, passwords } =
+      userData;
+
+    if (!userName || !email) {
+      return res.status(400).json({
+        success: false,
+        error: "User name and email are required",
+      });
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        error: "Email already in use",
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(passwords, salt);
+
+    const userUniqueID = `${userName.charAt(0).toUpperCase()}#${Math.floor(
+      1000 + Math.random() * 9000
+    )}`;
+
+    const newUser = await prisma.user.create({
+      data: {
+        userName,
+        email,
+        gender,
+        dateOfBirth: dob,
+        profilePictureUrl,
+        passwordHash,
+        userUniqueID,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    const token = generateJwtTokenAndSetCookie(newUser, passwords);
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 3 * 60 * 1000,
+      sameSite: "Strict",
+    });
+    return {
+      success: true,
+      user: newUser,
     };
+  } catch (err) {
+    logger.error("signUp ~ error:", err);
+    return res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+};
+
+export const logout = async (req, res) => {
+  try {
+    res.clearCookie("AuthToken");
+    res.status(200).json({ message: "Logged out successfully" });
+  } catch (error) {
+    logger.error("Error occurred during logout:", error);
+    res.status(500).json({ error: error.message });
   }
 };

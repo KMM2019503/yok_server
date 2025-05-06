@@ -8,15 +8,19 @@ generator client {
   binaryTargets = ["native", "linux-arm64-openssl-1.1.x"]
 }
 
+// Need to run after the database is changed
+// bunx prisma generate
+// bunx prisma db push
+
 model User {
   id                  String               @id @default(auto()) @map("_id") @db.ObjectId
-  firebaseUserId      String               @unique @map("firebase_user_id")
-  phone               String               @unique
-  email               String?              @unique
+  email               String              @unique
+  userUniqueID        String              @unique
+  gender              Gender?              
+  userName            String              @map("user_name")
   dateOfBirth         DateTime?            @map("date_of_birth")
-  userName            String?              @map("user_name")
-  dob                 DateTime?
   profilePictureUrl   String?              @map("profile_picture_url")
+  passwordHash        String              @map("password_hash")
   lastActiveAt        DateTime?            @map("last_active_at")
   fcm                 Json                 @default("[]")
   sentMessages        Message[]            @relation("SentMessages")
@@ -37,6 +41,12 @@ model User {
   updatedAt           DateTime             @updatedAt
 
   @@map("users")
+}
+
+enum Gender {
+  M
+  F
+  T
 }
 
 model Conversation {

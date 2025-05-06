@@ -39,7 +39,7 @@ const startServer = async() => {
   // Use routes
   app.use("/v1/", routes);
 
-  app.get("/healthz", (req: Request, res: Response) => {
+  app.get("/healthy", (req: Request, res: Response) => {
     res.status(200).json({
       status: "ok",
       message: "Server is healthy",
