@@ -13,6 +13,7 @@ import prisma, { connectToDatabase } from "../prisma/prismaClient.js";
 // @ts-ignore
 import cron from "node-cron";
 import { deleteStaleFcmTokenServices } from "./v1/services/commonService.js";
+import cors from "cors";
 
 
 dotenv.config(); // Load environment variables
@@ -32,7 +33,12 @@ const startServer = async() => {
 
   app.use(express.json());
   app.use(cookieParser());
-
+  app.use(
+    cors({
+      origin: "http://localhost:3000",
+      credentials: true,
+    })
+  )
   // Apply middlewares
   applyMiddlewares(app);
 

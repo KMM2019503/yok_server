@@ -37,25 +37,25 @@ export const login = async (req, res) => {
       });
     }
 
-    
-    const token = generateJwtTokenAndSetCookie(user, password);
+    const token = generateJwtTokenAndSetCookie(user, user.passwordHash);
+    console.log("🚀 ~ login ~ token:", token)
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: 3 * 60 * 1000, 
+      maxAge: 10 * 60 * 1000,
       sameSite: "Strict",
     });
 
-    return res.status(200).json({
+    return {
       success: true,
       user,
-    });
+    };
   } catch (err) {
     logger.error("login ~ error:", err);
-    return res.status(500).json({
+    return {
       success: false,
       error: "Internal server error",
-    });
+    };
   }
 };
 
@@ -103,7 +103,7 @@ export const signUp = async (userData, res) => {
       },
     });
 
-    const token = generateJwtTokenAndSetCookie(newUser, passwords);
+    const token = generateJwtTokenAndSetCookie(newUser, newUser.passwordHash);
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

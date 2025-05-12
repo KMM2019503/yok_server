@@ -69,7 +69,6 @@ export const sendDmMessageService = async (req) => {
               select: {
                 id: true,
                 userName: true,
-                phone: true,
                 profilePictureUrl: true,
               },
             },
@@ -130,23 +129,6 @@ export const sendDmMessageService = async (req) => {
 
         // Emit message to receiver
         const emitReturn = await emitNewMessage(receiverId, message);
-
-        // if (!emitReturn) {
-        //   // Handle offline user notifications
-        //   const receiver = conversation.members.find(
-        //     (m) => m.user.id === receiverId
-        //   );
-        //   if (receiver) {
-        //     const FcmTokens = receiver.user.fcm.map((token) => token.token);
-        //     const payload = {
-        //       title: `New Message from ${message.sender.userName}`,
-        //       body: truncatedContent,
-        //       icon: message.sender.profilePictureUrl,
-        //       data: { sender: message.sender.userName },
-        //     };
-        //     await sendNotification(FcmTokens, payload);
-        //   }
-        // }
       } catch (error) {
         logger.error("Error in post-message processing tasks:", {
           message: error.message,
@@ -193,7 +175,6 @@ const getOrCreateConversation = async (
               select: {
                 id: true,
                 userName: true,
-                phone: true,
                 profilePictureUrl: true,
                 fcm: true,
               },
@@ -222,7 +203,6 @@ const getOrCreateConversation = async (
               select: {
                 id: true,
                 userName: true,
-                phone: true,
                 profilePictureUrl: true,
               },
             },
@@ -231,7 +211,7 @@ const getOrCreateConversation = async (
       },
     });
   }
-
+  console.log('enter this step');
   // If conversationId is provided, fetch the conversation
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
@@ -242,7 +222,6 @@ const getOrCreateConversation = async (
             select: {
               id: true,
               userName: true,
-              phone: true,
               profilePictureUrl: true,
             },
           },
@@ -250,6 +229,7 @@ const getOrCreateConversation = async (
       },
     },
   });
+  console.log("🚀 ~ conversation:", conversation)
 
   if (!conversation) {
     throw new Error("Conversation not found");

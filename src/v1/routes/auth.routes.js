@@ -10,4 +10,13 @@ router.post("/signup", signUp);
 
 router.post("/logout", checkToken, logout);
 
+router.get("/checkAuth", checkToken, (req, res) => {
+    console.log("🚀 ~ router.get ~ req:", req.userId)
+    
+    res.status(200).json({
+        success: true,
+        message: "User is authenticated",
+    });
+})
+
 export default router;
