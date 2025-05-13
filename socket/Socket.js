@@ -79,8 +79,33 @@ io.on("connection", (socket) => {
   }
   logger.info(`User connected: ${socket.id}, User ID: ${userId}`);
   onlineUsers[userId] = socket.id;
-  io.emit("pullOnlineUsers", Object.keys(onlineUsers));
 
+  const sendUserData = async () => {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId }
+      });
+
+      if (!user) {
+        logger.warn(`User not found for ID: ${userId}`);
+        return socket.emit("userData", null);
+      }
+
+      const socketId = getReceiverSocketId(userId);
+      if (socketId) {
+        io.to(socketId).emit("userData", user);
+      }
+
+    } catch (error) {
+      logger.error("Error fetching user data:", error);
+    }
+  };
+
+  sendUserData();
+
+  io.emit("pullOnlineUsers", Object.keys(onlineUsers));
+  socket.on("pullUserData", sendUserData);
+  
   socket.on("reconnectUser", async (data) => {
     console.log("🚀 ~ socket.on ~ reconnect user:", data);
     const { userId } = data;
