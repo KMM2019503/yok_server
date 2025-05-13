@@ -3,6 +3,7 @@ import http from "http";
 import express from "express";
 import logger from "../src/v1/utils/logger";
 import prisma from "../prisma/prismaClient";
+import jwt from "jsonwebtoken";
 import { checkToken } from "../src/v1/middlewares/checkAuth"; // Import the checkAuth middleware
 
 const app = express();
@@ -21,27 +22,64 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
     credentials: true,
   },
+  cookie: true
 });
 
-logger.info("WebSocket server started");
+io.use(async (socket, next) => {
+  try {
+    const cookieHeader = socket.request.headers.cookie;
+    
+    if (!cookieHeader) {
+      logger.warn("No cookies found in connection attempt");
+      return next(new Error("Authentication required"));
+    }
 
-// Apply the checkAuth middleware to each incoming connection
-// io.use((socket, next) => {
-//   checkToken(socket.handshake, {}, next);
-// });
+    const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+      const [name, value] = cookie.trim().split('=');
+      acc[name] = value;
+      return acc;
+    }, {});
 
-// Handle incoming socket connections
+    const token = cookies['token'];
+    
+    if (!token) {
+      logger.warn("No authentication token found in cookies");
+      return next(new Error("Authentication token missing"));
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    
+    socket.user = {
+      id: decoded.userId,
+    };
+
+    logger.info(`Authenticated user ${decoded.userId} connecting`);
+    next();
+  } catch (error) {
+    logger.error(`Authentication failed: ${error.message}`);
+    
+    // Handle specific JWT errors
+    if (error instanceof jwt.JsonWebTokenError) {
+      return next(new Error("Invalid token"));
+    }
+    if (error instanceof jwt.TokenExpiredError) {
+      return next(new Error("Token expired"));
+    }
+    
+    next(new Error("Authentication error"));
+  }
+});
+
 io.on("connection", (socket) => {
   logger.info("A new connection attempt detected");
-  const userId = socket.handshake.query.userId; // Get user ID from the connection
-
-  if (userId && userId !== "undefined") {
-    onlineUsers[userId] = socket.id; // Store the socket ID associated with the user ID
-    logger.info(`User connected: ${socket.id}, User ID: ${userId}`);
-    io.emit("pullOnlineUsers", Object.keys(onlineUsers)); // Notify all clients about the updated list of online users
-  } else {
-    logger.warn("User ID is undefined or invalid.");
+  const userId = socket.user?.id;
+  if (!userId) {
+    logger.warn("Connection established without user ID");
+    return socket.disconnect(true);
   }
+  logger.info(`User connected: ${socket.id}, User ID: ${userId}`);
+  onlineUsers[userId] = socket.id;
+  io.emit("pullOnlineUsers", Object.keys(onlineUsers));
 
   socket.on("reconnectUser", async (data) => {
     console.log("🚀 ~ socket.on ~ reconnect user:", data);
