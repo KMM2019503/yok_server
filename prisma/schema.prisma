@@ -14,15 +14,19 @@ generator client {
 
 model User {
   id                  String               @id @default(auto()) @map("_id") @db.ObjectId
-  email               String              @unique
-  userUniqueID        String              @unique
-  gender              Gender?              
-  userName            String              @map("user_name")
+  email               String               @unique
+  userUniqueID        String               @unique
+  gender              Gender?
+  userName            String               @map("user_name")
   dateOfBirth         DateTime?            @map("date_of_birth")
   profilePictureUrl   String?              @map("profile_picture_url")
-  passwordHash        String              @map("password_hash")
+  passwordHash        String               @map("password_hash")
   lastActiveAt        DateTime?            @map("last_active_at")
   fcm                 Json                 @default("[]")
+  friends             Friendship[]         @relation("UserFriends")
+  friendOf            Friendship[]         @relation("FriendOfUser")
+  sentRequests        FriendRequest[]      @relation("SentFriendRequests")
+  receivedRequests    FriendRequest[]      @relation("ReceivedFriendRequests")
   sentMessages        Message[]            @relation("SentMessages")
   conversationMembers ConversationMember[]
   adminChannels       Channel[]            @relation("AdminChannels")
@@ -40,13 +44,47 @@ model User {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
-  @@map("users")
+    @@index([userName])
+    @@map("users")
 }
 
 enum Gender {
   M
   F
   T
+}
+
+model Friendship {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], name: "UserFriends")
+  userId    String   @db.ObjectId
+  friend    User     @relation(fields: [friendId], references: [id], name: "FriendOfUser")
+  friendId  String   @db.ObjectId
+  createdAt DateTime @default(now())
+
+  @@unique([userId, friendId])
+  @@map("friendships")
+}
+
+model FriendRequest {
+  id         String              @id @default(auto()) @map("_id") @db.ObjectId
+  sender     User                @relation(fields: [senderId], references: [id], name: "SentFriendRequests")
+  senderId   String              @db.ObjectId
+  receiver   User                @relation(fields: [receiverId], references: [id], name: "ReceivedFriendRequests")
+  receiverId String              @db.ObjectId
+  status     FriendRequestStatus @default(PENDING)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  @@unique([senderId, receiverId])
+  @@map("friend_requests")
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
 }
 
 model Conversation {

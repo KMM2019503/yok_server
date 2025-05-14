@@ -4,7 +4,6 @@ import express from "express";
 import logger from "../src/v1/utils/logger";
 import prisma from "../prisma/prismaClient";
 import jwt from "jsonwebtoken";
-import { checkToken } from "../src/v1/middlewares/checkAuth"; // Import the checkAuth middleware
 
 const app = express();
 const server = http.createServer(app);
@@ -33,20 +32,24 @@ io.use(async (socket, next) => {
       logger.warn("No cookies found in connection attempt");
       return next(new Error("Authentication required"));
     }
+    //* Need to open for frontend *//
+    // const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+    //   const [name, value] = cookie.trim().split('=');
+    //   acc[name] = value;
+    //   return acc;
+    // }, {});
 
-    const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
-      const [name, value] = cookie.trim().split('=');
-      acc[name] = value;
-      return acc;
-    }, {});
+    // const token = cookies['token'];
 
-    const token = cookies['token'];
-    
+
+    // * Need to open for postman *//
+    const token = cookieHeader;
+
     if (!token) {
       logger.warn("No authentication token found in cookies");
       return next(new Error("Authentication token missing"));
     }
-
+    
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
     
     socket.user = {

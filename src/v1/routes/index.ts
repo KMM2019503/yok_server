@@ -8,12 +8,14 @@ import ConversationRoutes from "./conversation.route"
 import ContactRoutes from "./contact.routes"
 import GroupRoutes from "./groups.route"
 import multiSearchRoutes from "./multiSearch.routes"
+import FriendRoutes from "./friend.routes"
 import FileUrl from "./file.routes"
 
 const router = Router();
 
 router.use("/", authRoutes)
 router.use("/users", userRoutes)
+router.use("/friends", FriendRoutes)
 router.use("/channels", channelRoutes)
 router.use("/messages", MessageRoutes)
 router.use("/conversations", ConversationRoutes)
