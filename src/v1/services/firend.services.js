@@ -428,10 +428,10 @@ export const getFriendRequestsService = async (req) => {
 };
 
 export const getFriendsListService = async (req) => {
-  const userId = req.userId;
+  const userId = req.userid;
 
   const friends = await prisma.friendship.findMany({
-    where: { userId },
+    where: { userId: userId },
     include: {
       friend: {
         select: {
@@ -446,6 +446,8 @@ export const getFriendsListService = async (req) => {
       createdAt: "desc",
     },
   });
+  
+  console.log("🚀 ~ getFriendsListService ~ friends:", friends)
 
   return {
     friends: friends.map((f) => f.friend),

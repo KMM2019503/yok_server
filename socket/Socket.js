@@ -33,17 +33,17 @@ io.use(async (socket, next) => {
       return next(new Error("Authentication required"));
     }
     //* Need to open for frontend *//
-    // const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
-    //   const [name, value] = cookie.trim().split('=');
-    //   acc[name] = value;
-    //   return acc;
-    // }, {});
+    const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+      const [name, value] = cookie.trim().split('=');
+      acc[name] = value;
+      return acc;
+    }, {});
 
-    // const token = cookies['token'];
+    const token = cookies['token'];
 
 
     // * Need to open for postman *//
-    const token = cookieHeader;
+    // const token = cookieHeader;
 
     if (!token) {
       logger.warn("No authentication token found in cookies");
@@ -346,11 +346,8 @@ io.on("connection", (socket) => {
 
   // Handle user disconnection
   socket.on("disconnect", async () => {
-    logger.info(`User disconnected process started at: ${socket.id}`);
-
     if (userId && onlineUsers[userId]) {
       delete onlineUsers[userId];
-
       try {
         await prisma.user.update({
           where: { id: userId },
@@ -358,9 +355,7 @@ io.on("connection", (socket) => {
             lastActiveAt: new Date(),
           },
         });
-        logger.info(`User disconnected process finished at: ${socket.id}`);
-
-        io.emit("pullOnlineUsers", Object.keys(onlineUsers)); // Notify all clients about the updated list of online users
+        io.emit("pullOnlineUsers", Object.keys(onlineUsers));
       } catch (error) {
         logger.error("Error updating user status on disconnect:", error);
       }

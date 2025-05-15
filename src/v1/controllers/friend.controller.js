@@ -7,26 +7,26 @@ import {
   getFriendRequestsService,
   getFriendsListService,
   removeFriendService,
-  searchUsersService
+  searchUsersService,
 } from "../services/firend.services.js";
 
 export const searchUsers = async (req, res) => {
-    try {
-      const response = await searchUsersService(req);
-      res.status(200).json(response);
-    } catch (error) {
-      logger.error("Error during user search:", {
-        error: error.message,
-        query: req.query.query
-      });
-      
-      const statusCode = error.statusCode || 500;
-      res.status(statusCode).json({ 
-        error: error.message,
-        ...(error.statusCode ? {} : { details: "Internal server error" })
-      });
-    }
-  };
+  try {
+    const response = await searchUsersService(req);
+    res.status(200).json(response);
+  } catch (error) {
+    logger.error("Error during user search:", {
+      error: error.message,
+      query: req.query.query,
+    });
+
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
+      error: error.message,
+      ...(error.statusCode ? {} : { details: "Internal server error" }),
+    });
+  }
+};
 
 export const sendFriendRequest = async (req, res) => {
   try {
