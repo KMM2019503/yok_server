@@ -153,12 +153,6 @@ export const sendFriendRequestService = async (req) => {
           email: true,
         },
       },
-      receiver: {
-        select: {
-          id: true,
-          userName: true,
-        },
-      },
     },
   });
 
@@ -167,14 +161,7 @@ export const sendFriendRequestService = async (req) => {
     io.to(receiverSocketId).emit("newFriendRequest", {
       message:
         "You have a new friend request From " + friendRequest.sender.userName,
-      data: {
-        senderId: friendRequest.sender.id,
-        senderName: friendRequest.sender.userName,
-        senderProfilePictureUrl: friendRequest.sender.profilePictureUrl,
-        senderEmail: friendRequest.sender.email,
-        requestId: friendRequest.id,
-        requestTime: friendRequest.createdAt,
-      },
+      data: friendRequest
     });
   }
 
@@ -191,7 +178,7 @@ const responseFriendRequestSocketService = (status, friendRequest) => {
   if (senderSocketId) {
     io.to(senderSocketId).emit("friendRequestResponse", {
       message: `${receiver.userName} is ${status} your friend request`,
-      receiver,
+      friendRequest,
     });
   }
 };
@@ -278,7 +265,7 @@ export const acceptFriendRequestService = async (req) => {
 
     return {
       message: "Friend request accepted successfully",
-      friendId: friendRequest.senderId,
+      requestId: friendRequest.id,
     };
   });
 };
@@ -333,6 +320,7 @@ export const rejectFriendRequestService = async (req) => {
 
     return {
       message: "Friend request rejected successfully",
+      requestId: friendRequest.id
     };
   });
 };
@@ -392,13 +380,16 @@ export const cancelFriendRequestService = async (req) => {
 };
 
 export const getFriendRequestsService = async (req) => {
-  const userId = req.userId;
-  const { type = "received" } = req.query;
+  const userId = req.userid;
+  // const { type = "received" } = req.query;
 
   const requests = await prisma.friendRequest.findMany({
+    // where: {
+    //   ...(type === "received" ? { receiverId: userId } : { senderId: userId }),
+    //   status: "PENDING",
+    // },
     where: {
-      ...(type === "received" ? { receiverId: userId } : { senderId: userId }),
-      status: "PENDING",
+      receiverId: userId
     },
     include: {
       sender: {
@@ -407,24 +398,37 @@ export const getFriendRequestsService = async (req) => {
           userName: true,
           profilePictureUrl: true,
         },
-      },
-      receiver: {
-        select: {
-          id: true,
-          userName: true,
-          profilePictureUrl: true,
-        },
-      },
+      }
     },
     orderBy: {
       createdAt: "desc",
     },
   });
-
+  
+  console.log("🚀 ~ getFriendRequestsService ~ requests:", requests)
   return {
     requests,
     count: requests.length,
   };
+};
+
+export const getOutgoingFriendRequestService = async (req) => {
+  const userId = req.userid;
+  
+  const requests = await prisma.friendRequest.findMany({
+    where: { senderId: userId },
+    include: {
+      receiver: {
+        select: {
+          id: true,
+          userName: true,
+          profilePictureUrl: true
+        }
+      }
+    }
+  });
+
+  return requests;
 };
 
 export const getFriendsListService = async (req) => {
@@ -437,6 +441,7 @@ export const getFriendsListService = async (req) => {
         select: {
           id: true,
           userName: true,
+          userUniqueID: true,
           profilePictureUrl: true,
           lastActiveAt: true,
         },

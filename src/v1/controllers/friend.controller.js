@@ -8,6 +8,7 @@ import {
   getFriendsListService,
   removeFriendService,
   searchUsersService,
+  getOutgoingFriendRequestService,
 } from "../services/firend.services.js";
 
 export const searchUsers = async (req, res) => {
@@ -86,6 +87,19 @@ export const getFriendRequests = async (req, res) => {
     res.status(200).json(response);
   } catch (error) {
     logger.error("Error occurred while fetching friend requests:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getOutgoingFriendRequest = async (req, res) => {
+  try {
+    const response = await getOutgoingFriendRequestService(req);
+    res.status(200).json(response);
+  } catch (error) {
+    logger.error("Error occurred while fetching outgoing requests:", {
       message: error.message,
       stack: error.stack,
     });

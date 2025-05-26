@@ -1,14 +1,33 @@
 import { Router } from "express";
 import { checkToken } from "../middlewares/checkAuth";
-import { acceptFriendRequest, getFriendsList, searchUsers, sendFriendRequest } from "../controllers/friend.controller";
+import {
+  acceptFriendRequest,
+  getFriendRequests,
+  getFriendsList,
+  getOutgoingFriendRequest,
+  rejectFriendRequest,
+  searchUsers,
+  sendFriendRequest,
+} from "../controllers/friend.controller";
 const router = Router();
 
-router.get("/find-friends", checkToken, searchUsers)
+router.get("/find-friends", checkToken, searchUsers);
+
+router.get("/get-all-friends", checkToken, getFriendsList);
+
+router.get(
+  "/get-outgoing-friend-requests",
+  checkToken,
+  getOutgoingFriendRequest
+);
+
+router.get("/get-friends-requests", checkToken, getFriendRequests);
 
 router.post("/send-friend-request", checkToken, sendFriendRequest);
 
 router.post("/accept-friend-request", checkToken, acceptFriendRequest);
 
-router.get("/get-all-friends", checkToken, getFriendsList);
+router.post("/reject-friend-request", checkToken, rejectFriendRequest);
+
 
 export default router;
