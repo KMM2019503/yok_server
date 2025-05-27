@@ -2,6 +2,7 @@ import { Router } from "express";
 import { checkToken } from "../middlewares/checkAuth";
 import {
   acceptFriendRequest,
+  cancelFriendRequest,
   getFriendRequests,
   getFriendsList,
   getOutgoingFriendRequest,
@@ -28,6 +29,8 @@ router.post("/send-friend-request", checkToken, sendFriendRequest);
 router.post("/accept-friend-request", checkToken, acceptFriendRequest);
 
 router.post("/reject-friend-request", checkToken, rejectFriendRequest);
+
+router.post("/cancel-friend-request", checkToken, cancelFriendRequest);
 
 
 export default router;

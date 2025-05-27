@@ -3,7 +3,7 @@ import { getReceiverSocketId, io } from "../../../socket/Socket";
 
 export const searchUsersService = async (req) => {
   const { query, page = 1, limit = 10 } = req.query;
-  const userId = req.userId;
+  const userId = req.userid;
 
   if (!query || query.trim().length < 2) {
     throw new Error("Search query must be at least 2 characters long");
@@ -153,6 +153,14 @@ export const sendFriendRequestService = async (req) => {
           email: true,
         },
       },
+      receiver: {
+        select: {
+          id: true,
+          userName: true,
+          profilePictureUrl: true,
+          email: true,
+        },
+      },
     },
   });
 
@@ -161,7 +169,7 @@ export const sendFriendRequestService = async (req) => {
     io.to(receiverSocketId).emit("newFriendRequest", {
       message:
         "You have a new friend request From " + friendRequest.sender.userName,
-      data: friendRequest
+      request: friendRequest,
     });
   }
 
@@ -173,13 +181,25 @@ export const sendFriendRequestService = async (req) => {
 
 const responseFriendRequestSocketService = (status, friendRequest) => {
   const { sender, receiver } = friendRequest;
-  const senderSocketId = getReceiverSocketId(sender.id);
+  if(status === 'cancelled') {
+    const receiverSocketId = getReceiverSocketId(friendRequest.receiver.id);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("friendRequestResponse", {
+        message: `${friendRequest.sender.userName} has cancelled his friend request`,
+        friendRequest,
+        status,
+      });
+    }
+  } else {
+    const senderSocketId = getReceiverSocketId(sender.id);
 
   if (senderSocketId) {
     io.to(senderSocketId).emit("friendRequestResponse", {
-      message: `${receiver.userName} is ${status} your friend request`,
+      message: `${friendRequest.receiver.userName} is ${status} your friend request`,
       friendRequest,
+      status,
     });
+  }
   }
 };
 
@@ -195,14 +215,18 @@ export const acceptFriendRequestService = async (req) => {
         select: {
           id: true,
           userName: true,
-          email: true,
+          lastActiveAt: true,
+          profilePictureUrl: true,
+          userUniqueID: true,
         },
       },
       receiver: {
         select: {
           id: true,
           userName: true,
-          email: true,
+          lastActiveAt: true,
+          profilePictureUrl: true,
+          userUniqueID: true,
         },
       },
     },
@@ -266,13 +290,14 @@ export const acceptFriendRequestService = async (req) => {
     return {
       message: "Friend request accepted successfully",
       requestId: friendRequest.id,
+      sender: friendRequest.sender,
     };
   });
 };
 
 export const rejectFriendRequestService = async (req) => {
   const { requestId } = req.body;
-  const userId = req.userId;
+  const userId = req.userid;
 
   // Find the friend request with included user data
   const friendRequest = await prisma.friendRequest.findUnique({
@@ -282,14 +307,18 @@ export const rejectFriendRequestService = async (req) => {
         select: {
           id: true,
           userName: true,
-          email: true,
+          lastActiveAt: true,
+          profilePictureUrl: true,
+          userUniqueID: true,
         },
       },
       receiver: {
         select: {
           id: true,
           userName: true,
-          email: true,
+          lastActiveAt: true,
+          profilePictureUrl: true,
+          userUniqueID: true,
         },
       },
     },
@@ -310,24 +339,45 @@ export const rejectFriendRequestService = async (req) => {
   // Use transaction for consistency
   return await prisma.$transaction(async (prisma) => {
     // Update the friend request status
-    await prisma.friendRequest.update({
+    let response = await prisma.friendRequest.update({
       where: { id: requestId },
       data: { status: "REJECTED" },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            userName: true,
+            lastActiveAt: true,
+            profilePictureUrl: true,
+            userUniqueID: true,
+          },
+        },
+        receiver: {
+          select: {
+            id: true,
+            userName: true,
+            lastActiveAt: true,
+            profilePictureUrl: true,
+            userUniqueID: true,
+          },
+        },
+      },
     });
 
     // Notify the sender about the rejection
-    responseFriendRequestSocketService("rejected", friendRequest);
+    responseFriendRequestSocketService("rejected", response);
 
     return {
       message: "Friend request rejected successfully",
-      requestId: friendRequest.id
+      requestId: friendRequest.id,
+      sender: friendRequest.sender,
     };
   });
 };
 
 export const cancelFriendRequestService = async (req) => {
   const { requestId } = req.body;
-  const userId = req.userId;
+  const userId = req.userid;
 
   // Find the friend request with included user data
   const friendRequest = await prisma.friendRequest.findUnique({
@@ -354,7 +404,7 @@ export const cancelFriendRequestService = async (req) => {
     throw new Error("Friend request not found");
   }
 
-  if (friendRequest.senderId !== userId) {
+  if (friendRequest.sender.id !== userId) {
     throw new Error("You can only cancel requests you sent");
   }
 
@@ -365,16 +415,33 @@ export const cancelFriendRequestService = async (req) => {
   // Use transaction for consistency
   return await prisma.$transaction(async (prisma) => {
     // Update the friend request status
-    await prisma.friendRequest.update({
+    let request = await prisma.friendRequest.update({
       where: { id: requestId },
       data: { status: "CANCELLED" },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            userName: true,
+            email: true,
+          },
+        },
+        receiver: {
+          select: {
+            id: true,
+            userName: true,
+            email: true,
+          },
+        },
+      },
     });
 
     // Notify the receiver about the cancellation
-    responseFriendRequestSocketService("cancelled", friendRequest);
+    responseFriendRequestSocketService("cancelled", request);
 
     return {
       message: "Friend request cancelled successfully",
+      request: request
     };
   });
 };
@@ -389,7 +456,8 @@ export const getFriendRequestsService = async (req) => {
     //   status: "PENDING",
     // },
     where: {
-      receiverId: userId
+      receiverId: userId,
+      status: "PENDING",
     },
     include: {
       sender: {
@@ -398,14 +466,14 @@ export const getFriendRequestsService = async (req) => {
           userName: true,
           profilePictureUrl: true,
         },
-      }
+      },
     },
     orderBy: {
       createdAt: "desc",
     },
   });
-  
-  console.log("🚀 ~ getFriendRequestsService ~ requests:", requests)
+
+  console.log("🚀 ~ getFriendRequestsService ~ requests:", requests);
   return {
     requests,
     count: requests.length,
@@ -414,7 +482,7 @@ export const getFriendRequestsService = async (req) => {
 
 export const getOutgoingFriendRequestService = async (req) => {
   const userId = req.userid;
-  
+
   const requests = await prisma.friendRequest.findMany({
     where: { senderId: userId },
     include: {
@@ -422,10 +490,10 @@ export const getOutgoingFriendRequestService = async (req) => {
         select: {
           id: true,
           userName: true,
-          profilePictureUrl: true
-        }
-      }
-    }
+          profilePictureUrl: true,
+        },
+      },
+    },
   });
 
   return requests;
@@ -451,8 +519,8 @@ export const getFriendsListService = async (req) => {
       createdAt: "desc",
     },
   });
-  
-  console.log("🚀 ~ getFriendsListService ~ friends:", friends)
+
+  console.log("🚀 ~ getFriendsListService ~ friends:", friends);
 
   return {
     friends: friends.map((f) => f.friend),
