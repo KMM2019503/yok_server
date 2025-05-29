@@ -10,6 +10,7 @@ import {
   searchUsersService,
   getOutgoingFriendRequestService,
 } from "../services/firend.services.js";
+import { findNearUsers } from "../services/location.services.js";
 
 export const searchUsers = async (req, res) => {
   try {
@@ -28,6 +29,24 @@ export const searchUsers = async (req, res) => {
     });
   }
 };
+
+export const searchNearbyUsers = async (req, res) => {
+  try {
+    const response = await findNearUsers(req.userid, req.body.location, req.body.maxDistance);
+    res.status(200).json(response);
+  } catch (error) {
+    logger.error("Error during user search base location:", {
+      error: error.message,
+      query: req.query.query,
+    });
+
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
+      error: error.message,
+      ...(error.statusCode ? {} : { details: "Internal server error" }),
+    });
+  }
+}
 
 export const sendFriendRequest = async (req, res) => {
   try {
@@ -132,3 +151,4 @@ export const removeFriend = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+

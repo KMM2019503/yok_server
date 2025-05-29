@@ -4,6 +4,7 @@ import express from "express";
 import logger from "../src/v1/utils/logger";
 import prisma from "../prisma/prismaClient";
 import jwt from "jsonwebtoken";
+import { deleteUserLocation, updateUserLocation } from "../src/v1/services/location.services";
 
 const app = express();
 const server = http.createServer(app);
@@ -21,26 +22,25 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
     credentials: true,
   },
-  cookie: true
+  cookie: true,
 });
 
 io.use(async (socket, next) => {
   try {
     const cookieHeader = socket.request.headers.cookie;
-    
+
     if (!cookieHeader) {
       logger.warn("No cookies found in connection attempt");
       return next(new Error("Authentication required"));
     }
     //* Need to open for frontend *//
-    const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
-      const [name, value] = cookie.trim().split('=');
+    const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
+      const [name, value] = cookie.trim().split("=");
       acc[name] = value;
       return acc;
     }, {});
 
-    const token = cookies['token'];
-
+    const token = cookies["token"];
 
     // * Need to open for postman *//
     // const token = cookieHeader;
@@ -49,9 +49,9 @@ io.use(async (socket, next) => {
       logger.warn("No authentication token found in cookies");
       return next(new Error("Authentication token missing"));
     }
-    
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
-    
+
     socket.user = {
       id: decoded.userId,
     };
@@ -60,7 +60,7 @@ io.use(async (socket, next) => {
     next();
   } catch (error) {
     logger.error(`Authentication failed: ${error.message}`);
-    
+
     // Handle specific JWT errors
     if (error instanceof jwt.JsonWebTokenError) {
       return next(new Error("Invalid token"));
@@ -68,7 +68,7 @@ io.use(async (socket, next) => {
     if (error instanceof jwt.TokenExpiredError) {
       return next(new Error("Token expired"));
     }
-    
+
     next(new Error("Authentication error"));
   }
 });
@@ -83,22 +83,27 @@ io.on("connection", (socket) => {
   logger.info(`User connected: ${socket.id}, User ID: ${userId}`);
   onlineUsers[userId] = socket.id;
 
+  //catch location updates
+  socket.on("updateUserLocation", async (data) => {
+    updateUserLocation(socket.user.id, data);
+  });
+
   const sendUserData = async () => {
     try {
       const user = await prisma.user.findUnique({
-        where: { id: userId }
+        where: { id: userId },
       });
 
       if (!user) {
         logger.warn(`User not found for ID: ${userId}`);
         return socket.emit("userData", null);
       }
+      console.log('asdfsd');
 
       const socketId = getReceiverSocketId(userId);
       if (socketId) {
         io.to(socketId).emit("userData", user);
       }
-
     } catch (error) {
       logger.error("Error fetching user data:", error);
     }
@@ -108,7 +113,7 @@ io.on("connection", (socket) => {
 
   io.emit("pullOnlineUsers", Object.keys(onlineUsers));
   socket.on("pullUserData", sendUserData);
-  
+
   socket.on("reconnectUser", async (data) => {
     console.log("🚀 ~ socket.on ~ reconnect user:", data);
     const { userId } = data;
@@ -349,6 +354,7 @@ io.on("connection", (socket) => {
     if (userId && onlineUsers[userId]) {
       delete onlineUsers[userId];
       try {
+        deleteUserLocation(userId);
         await prisma.user.update({
           where: { id: userId },
           data: {

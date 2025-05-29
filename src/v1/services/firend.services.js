@@ -1,101 +1,6 @@
 import prisma from "../../../prisma/prismaClient";
 import { getReceiverSocketId, io } from "../../../socket/Socket";
 
-export const searchUsersService = async (req) => {
-  const { query, page = 1, limit = 10 } = req.query;
-  const userId = req.userid;
-
-  if (!query || query.trim().length < 2) {
-    throw new Error("Search query must be at least 2 characters long");
-  }
-
-  const searchTerm = query.trim().toLowerCase();
-  const skip = (page - 1) * limit;
-
-  // Check if query matches a userUniqueID exactly
-  // if (/^[a-zA-Z0-9_-]{3,20}$/.test(searchTerm)) {
-  //   const exactMatch = await prisma.user.findFirst({
-  //     where: {
-  //       OR: [
-  //         { userUniqueID: { equals: searchTerm, mode: 'insensitive' } },
-  //         { id: searchTerm } // In case someone searches by MongoDB ID
-  //       ],
-  //       NOT: { id: userId } // Exclude self
-  //     },
-  //     select: {
-  //       id: true,
-  //       userName: true,
-  //       userUniqueID: true,
-  //       profilePictureUrl: true,
-  //       lastActiveAt: true
-  //     }
-  //   });
-
-  //   if (exactMatch) {
-  //     return {
-  //       results: [exactMatch],
-  //       page,
-  //       limit,
-  //       total: 1
-  //     };
-  //   }
-  // }
-
-  // Fuzzy search for usernames and emails
-  const results = await prisma.user.findMany({
-    where: {
-      AND: [
-        { NOT: { id: userId } }, // Exclude self
-        {
-          OR: [
-            { userName: { contains: searchTerm, mode: "insensitive" } },
-            { email: { contains: searchTerm, mode: "insensitive" } },
-          ],
-        },
-      ],
-    },
-    select: {
-      id: true,
-      userName: true,
-      userUniqueID: true,
-      profilePictureUrl: true,
-      lastActiveAt: true,
-      // Add other fields you want to return
-    },
-    take: limit,
-    skip: skip,
-    orderBy: [
-      // Prioritize username matches first
-      { userName: "asc" },
-      // Then userUniqueID matches
-      { userUniqueID: "asc" },
-    ],
-  });
-
-  const total = await prisma.user.count({
-    where: {
-      AND: [
-        { NOT: { id: userId } },
-        {
-          OR: [
-            { userName: { contains: searchTerm, mode: "insensitive" } },
-            { email: { contains: searchTerm, mode: "insensitive" } },
-            { userUniqueID: { contains: searchTerm, mode: "insensitive" } },
-          ],
-        },
-      ],
-    },
-  });
-
-  return {
-    results,
-    page,
-    limit,
-    total,
-    hasMore: skip + limit < total,
-  };
-};
-
 export const sendFriendRequestService = async (req) => {
   const { receiverId } = req.body;
   const senderId = req.userid;
@@ -181,7 +86,7 @@ export const sendFriendRequestService = async (req) => {
 
 const responseFriendRequestSocketService = (status, friendRequest) => {
   const { sender, receiver } = friendRequest;
-  if(status === 'cancelled') {
+  if (status === "cancelled") {
     const receiverSocketId = getReceiverSocketId(friendRequest.receiver.id);
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("friendRequestResponse", {
@@ -193,13 +98,13 @@ const responseFriendRequestSocketService = (status, friendRequest) => {
   } else {
     const senderSocketId = getReceiverSocketId(sender.id);
 
-  if (senderSocketId) {
-    io.to(senderSocketId).emit("friendRequestResponse", {
-      message: `${friendRequest.receiver.userName} is ${status} your friend request`,
-      friendRequest,
-      status,
-    });
-  }
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("friendRequestResponse", {
+        message: `${friendRequest.receiver.userName} is ${status} your friend request`,
+        friendRequest,
+        status,
+      });
+    }
   }
 };
 
@@ -441,7 +346,7 @@ export const cancelFriendRequestService = async (req) => {
 
     return {
       message: "Friend request cancelled successfully",
-      request: request
+      request: request,
     };
   });
 };
@@ -473,7 +378,6 @@ export const getFriendRequestsService = async (req) => {
     },
   });
 
-  console.log("🚀 ~ getFriendRequestsService ~ requests:", requests);
   return {
     requests,
     count: requests.length,
@@ -520,8 +424,6 @@ export const getFriendsListService = async (req) => {
     },
   });
 
-  console.log("🚀 ~ getFriendsListService ~ friends:", friends);
-
   return {
     friends: friends.map((f) => f.friend),
     count: friends.length,
@@ -555,5 +457,100 @@ export const removeFriendService = async (req) => {
 
   return {
     message: "Friend removed successfully",
+  };
+};
+
+export const searchUsersService = async (req) => {
+  const { query, page = 1, limit = 10 } = req.query;
+  const userId = req.userid;
+
+  if (!query || query.trim().length < 2) {
+    throw new Error("Search query must be at least 2 characters long");
+  }
+
+  const searchTerm = query.trim().toLowerCase();
+  const skip = (page - 1) * limit;
+
+  // Check if query matches a userUniqueID exactly
+  // if (/^[a-zA-Z0-9_-]{3,20}$/.test(searchTerm)) {
+  //   const exactMatch = await prisma.user.findFirst({
+  //     where: {
+  //       OR: [
+  //         { userUniqueID: { equals: searchTerm, mode: 'insensitive' } },
+  //         { id: searchTerm } // In case someone searches by MongoDB ID
+  //       ],
+  //       NOT: { id: userId } // Exclude self
+  //     },
+  //     select: {
+  //       id: true,
+  //       userName: true,
+  //       userUniqueID: true,
+  //       profilePictureUrl: true,
+  //       lastActiveAt: true
+  //     }
+  //   });
+
+  //   if (exactMatch) {
+  //     return {
+  //       results: [exactMatch],
+  //       page,
+  //       limit,
+  //       total: 1
+  //     };
+  //   }
+  // }
+
+  // Fuzzy search for usernames and emails
+  const results = await prisma.user.findMany({
+    where: {
+      AND: [
+        { NOT: { id: userId } }, // Exclude self
+        {
+          OR: [
+            { userName: { contains: searchTerm, mode: "insensitive" } },
+            { email: { contains: searchTerm, mode: "insensitive" } },
+          ],
+        },
+      ],
+    },
+    select: {
+      id: true,
+      userName: true,
+      userUniqueID: true,
+      profilePictureUrl: true,
+      lastActiveAt: true,
+      // Add other fields you want to return
+    },
+    take: limit,
+    skip: skip,
+    orderBy: [
+      // Prioritize username matches first
+      { userName: "asc" },
+      // Then userUniqueID matches
+      { userUniqueID: "asc" },
+    ],
+  });
+
+  const total = await prisma.user.count({
+    where: {
+      AND: [
+        { NOT: { id: userId } },
+        {
+          OR: [
+            { userName: { contains: searchTerm, mode: "insensitive" } },
+            { email: { contains: searchTerm, mode: "insensitive" } },
+            { userUniqueID: { contains: searchTerm, mode: "insensitive" } },
+          ],
+        },
+      ],
+    },
+  });
+
+  return {
+    results,
+    page,
+    limit,
+    total,
+    hasMore: skip + limit < total,
   };
 };

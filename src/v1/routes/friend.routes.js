@@ -7,12 +7,14 @@ import {
   getFriendsList,
   getOutgoingFriendRequest,
   rejectFriendRequest,
+  searchNearbyUsers,
   searchUsers,
   sendFriendRequest,
 } from "../controllers/friend.controller";
 const router = Router();
 
 router.get("/find-friends", checkToken, searchUsers);
+
 
 router.get("/get-all-friends", checkToken, getFriendsList);
 
@@ -21,6 +23,7 @@ router.get(
   checkToken,
   getOutgoingFriendRequest
 );
+router.post("/get-users-nearby-location", checkToken, searchNearbyUsers);
 
 router.get("/get-friends-requests", checkToken, getFriendRequests);
 
