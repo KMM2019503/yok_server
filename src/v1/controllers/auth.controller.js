@@ -23,8 +23,8 @@ export const signUp = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
-    res.clearCookie("AuthToken");
-    res.status(200).json({ message: "Logged out successfully" });
+    const result = await authServices.logout(res);
+    res.status(200).json(result);
   } catch (error) {
     logger.error("Error occurred during logout:", error);
     res.status(500).json({ error: error.message });

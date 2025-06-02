@@ -38,7 +38,6 @@ export const login = async (req, res) => {
     }
 
     const token = generateJwtTokenAndSetCookie(user, user.passwordHash);
-    console.log("🚀 ~ login ~ token:", token)
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -130,12 +129,18 @@ export const signUp = async (userData, res) => {
   }
 };
 
-export const logout = async (req, res) => {
+export const logout = async (res) => {
   try {
-    res.clearCookie("AuthToken");
-    res.status(200).json({ message: "Logged out successfully" });
+    res.clearCookie("token");
+    return {
+      success: true,
+      message: "Logged out successfully",
+    }
   } catch (error) {
     logger.error("Error occurred during logout:", error);
-    res.status(500).json({ error: error.message });
+    return {
+      success: false,
+      error: "Internal server error",
+    };
   }
 };

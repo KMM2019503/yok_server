@@ -98,7 +98,6 @@ io.on("connection", (socket) => {
         logger.warn(`User not found for ID: ${userId}`);
         return socket.emit("userData", null);
       }
-      console.log('asdfsd');
 
       const socketId = getReceiverSocketId(userId);
       if (socketId) {
@@ -115,7 +114,6 @@ io.on("connection", (socket) => {
   socket.on("pullUserData", sendUserData);
 
   socket.on("reconnectUser", async (data) => {
-    console.log("🚀 ~ socket.on ~ reconnect user:", data);
     const { userId } = data;
 
     if (!userId) return;
@@ -133,9 +131,6 @@ io.on("connection", (socket) => {
         }),
       ]);
 
-      console.log("🚀 ~ socket.on ~ userGroups:", userGroups);
-      console.log("🚀 ~ socket.on ~ userChannels:", userChannels);
-
       // Use a Set to avoid duplicate socket joins
       const uniqueIds = new Set();
 
@@ -144,8 +139,6 @@ io.on("connection", (socket) => {
 
       // Join the socket to all unique group and channel IDs
       uniqueIds.forEach((id) => socket.join(id));
-
-      console.log("Finished joining sockets");
     } catch (error) {
       logger.error(
         "Error fetching user groups or channels on reconnect:",
@@ -157,11 +150,6 @@ io.on("connection", (socket) => {
   socket.on("markMessagesAsRead", async ({ messageIds, userId, groupId }) => {
     try {
       const startTime = Date.now();
-      console.log(
-        `Message status updating process started at ${new Date(
-          startTime
-        ).toISOString()}`
-      );
 
       if (!Array.isArray(messageIds) || messageIds.length === 0) {
         throw new Error("Invalid or missing message IDs.");
@@ -200,19 +188,10 @@ io.on("connection", (socket) => {
         },
       });
 
-      console.log("🚀 ~ updatedMessagesCount:", updatedMessagesCount);
-
       const updatedMessages = await prisma.message.findMany({
         where: { id: { in: messageIdsToUpdate } },
         include: { status: true },
       });
-
-      console.log("🚀 ~ updatedMessages:", updatedMessages);
-      console.log(
-        `Message status updating process ended at ${new Date(
-          Date.now()
-        ).toISOString()}`
-      );
 
       if (updatedMessages.length > 0) {
         if (groupId) {
@@ -242,13 +221,6 @@ io.on("connection", (socket) => {
     async ({ conversationId, userId, groupId }) => {
       try {
         const startTime = Date.now();
-        console.log("🚀 ~ userId:", userId);
-        console.log("🚀 ~ conversationId:", conversationId);
-        console.log(
-          `Message status updating process started at ${new Date(
-            startTime
-          ).toISOString()}`
-        );
 
         // Validate input
         if (!userId) {
@@ -285,9 +257,6 @@ io.on("connection", (socket) => {
         );
 
         if (messagesToUpdate.length === 0) {
-          console.log(
-            "No messages need updating. User is already in seenUserIds or is the sender."
-          );
           return;
         }
 
@@ -306,20 +275,11 @@ io.on("connection", (socket) => {
           },
         });
 
-        console.log("🚀 ~ updatedMessagesCount:", updatedMessagesCount);
-
         // Retrieve the updated messages
         const updatedMessages = await prisma.message.findMany({
           where: { id: { in: messageIdsToUpdate } },
           include: { status: true },
         });
-
-        console.log("🚀 ~ updatedMessages:", updatedMessages);
-        console.log(
-          `Message status updating process ended at ${new Date(
-            Date.now()
-          ).toISOString()}`
-        );
 
         // Emit the updated messages to the appropriate socket
         if (updatedMessages.length > 0) {

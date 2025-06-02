@@ -8,7 +8,7 @@ router.post("/login", login);
 
 router.post("/signup", signUp);
 
-router.post("/logout", checkToken, logout);
+router.get("/logout", checkToken, logout);
 
 router.get("/checkAuth", checkToken, (req, res) => {
     console.log("🚀 ~ router.get ~ req:", req.userId)
