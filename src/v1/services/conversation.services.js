@@ -36,7 +36,7 @@ export const getAllConversationsService = async (req) => {
       orderBy: {
         lastActivity: "desc",
       },
-      take: 20, // Limit to 20 conversations per fetch
+      take: 15, // Limit to 20 conversations per fetch
       cursor: cursorId ? { id: cursorId } : undefined,
       skip: cursorId ? 1 : 0, // Skip the cursor if it exists
     });
