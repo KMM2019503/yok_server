@@ -13,7 +13,7 @@ const router = Router();
 // router.use(checkToken);
 
 // Get all conversations for the authenticated user with pagination
-router.get("/", getAllConversations);
+router.get("/get-conversation", checkToken, getAllConversations);
 
 //New Route for initail fetch
 router.get(

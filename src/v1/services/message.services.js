@@ -1,10 +1,150 @@
-// message.services.js
 import logger from "../utils/logger";
 import { getReceiverSocketId, io } from "../../../socket/Socket";
 import prisma from "../../../prisma/prismaClient";
 
+export const sendDMMessageServiceV2 = async (req) => {
+  const userId = req.userid;
+  const { content, conversationId, receiverId } = req.body;
+
+  try {
+    const now = new Date();
+    const maxLength = 30;
+    let truncatedContent =
+      content.length > maxLength
+        ? content.slice(0, maxLength) + "..."
+        : content;
+
+    const conversation = await getOrCreateConversationV2(
+      conversationId,
+      userId,
+      receiverId
+    );
+
+    const data = {
+      senderId: userId,
+      content,
+      conversationId: conversation.id,
+      status: {
+        status: "SENT",
+      },
+    };
+
+    const [message, updatedConversation] = await prisma.$transaction([
+      prisma.message.create({
+        data: data,
+        select: {
+          id: true,
+          content: true,
+          status: true,
+          createdAt: true,
+          messageType: true,
+          conversationId: true,
+        },
+      }),
+      prisma.conversation.update({
+        where: { id: conversation.id },
+        data: {
+          lastMessage: {
+            content: truncatedContent,
+            senderId: userId,
+            createdAt: now,
+          },
+          lastActivity: now,
+        },
+      }),
+    ]);
+
+    emitNewMessage(receiverId, message, updatedConversation);
+
+    return {
+      success: true,
+      message,
+      conversation: updatedConversation,
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
+const getOrCreateConversationV2 = async (
+  conversationId,
+  userId,
+  receiverId
+) => {
+  if (!conversationId) {
+    const conversation = await prisma.conversation.create({
+      data: {
+        members: {
+          create: [{ userId }, { userId: receiverId }],
+        },
+      },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                userName: true,
+                profilePictureUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return conversation;
+  } else {
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                userName: true,
+                profilePictureUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+
+    return conversation;
+  }
+};
+
+// emit new message to online users
+const emitNewMessage = async (receiverId, message, updatedConversation) => {
+  let data = {
+    message,
+    updatedConversation,
+  };
+  const receiverSocketId = getReceiverSocketId(receiverId);
+  if (receiverSocketId) {
+    io.to(receiverSocketId).emit("incomingNewMessage", data, (ack) => {
+      if (!ack) {
+        logger.error(
+          "Socket emit acknowledgment failed, recipient might be disconnected"
+        );
+      }
+    });
+
+    return true;
+  } else {
+    // sending notification if the user is offline
+    return false;
+  }
+};
+
 export const sendDmMessageService = async (req) => {
-  const { userid } = req.headers;
+  const userid = req.userid;
   const {
     content,
     conversationId,
@@ -14,7 +154,6 @@ export const sendDmMessageService = async (req) => {
     originalMessageId,
   } = req.body;
 
-  console.log("🚀 ~ sendDmMessageService ~ photoUrl 1:", photoUrl);
   const now = new Date();
   const maxLength = 30;
   let truncatedContent =
@@ -211,7 +350,6 @@ const getOrCreateConversation = async (
       },
     });
   }
-  console.log('enter this step');
   // If conversationId is provided, fetch the conversation
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
@@ -229,7 +367,6 @@ const getOrCreateConversation = async (
       },
     },
   });
-  console.log("🚀 ~ conversation:", conversation)
 
   if (!conversation) {
     throw new Error("Conversation not found");
@@ -773,25 +910,6 @@ export const sendChannelMessageCommentService = async (req) => {
 // Emit comment to channel members
 const emitNewChannelComment = async (channelId, comment) => {
   io.to(channelId).emit("newChannelComment", comment);
-};
-
-// emit new message to online users
-const emitNewMessage = async (receiverId, message) => {
-  const receiverSocketId = getReceiverSocketId(receiverId);
-  if (receiverSocketId) {
-    io.to(receiverSocketId).emit("newMessage", message, (ack) => {
-      if (!ack) {
-        logger.error(
-          "Socket emit acknowledgment failed, recipient might be disconnected"
-        );
-      }
-    });
-
-    return true;
-  } else {
-    // sending notification if the user is offline
-    return false;
-  }
 };
 
 const emitNewGroupMessage = async (roomId, message) => {

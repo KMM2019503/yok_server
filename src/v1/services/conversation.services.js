@@ -1,22 +1,16 @@
 //conversation.services.js
 
-// import { PrismaClient } from "@prisma/client";
 import prisma from "../../../prisma/prismaClient";
 import logger from "../utils/logger";
-
-// const prisma = new PrismaClient();
-
 export const getAllConversationsService = async (req) => {
   try {
-    const { userid } = req.headers;
-
-    logger.debug(req.headers);
+    const userid = req.userid;
+    const { cursorId } = req.query; // The last conversation ID from previous fetch
 
     if (!userid) {
       throw new Error("User Id not found");
     }
 
-    // Fetch conversations where the user is a member without pagination
     const conversations = await prisma.conversation.findMany({
       where: {
         members: {
@@ -32,23 +26,26 @@ export const getAllConversationsService = async (req) => {
               select: {
                 id: true,
                 userName: true,
-                phone: true,
                 profilePictureUrl: true,
               },
             },
           },
         },
-        lastMessage: true,
-        pinnedItems: true,
+        lastMessage: true
       },
       orderBy: {
         lastActivity: "desc",
       },
+      take: 20, // Limit to 20 conversations per fetch
+      cursor: cursorId ? { id: cursorId } : undefined,
+      skip: cursorId ? 1 : 0, // Skip the cursor if it exists
     });
 
     return {
       success: true,
       conversations,
+      // Provide the last conversation ID for next pagination
+      nextCursor: conversations.length > 0 ? conversations[conversations.length - 1].id : null,
     };
   } catch (error) {
     throw error;

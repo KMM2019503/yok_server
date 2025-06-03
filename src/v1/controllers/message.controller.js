@@ -3,6 +3,7 @@ import {
   sendChannelMessageCommentService,
   sendChannelMessageService,
   sendDmMessageService,
+  sendDMMessageServiceV2,
   sendGroupMessageService,
 } from "../services/message.services";
 
@@ -10,7 +11,7 @@ import logger from "../utils/logger";
 
 export const sendDmMessage = async (req, res) => {
   try {
-    const response = await sendDmMessageService(req);
+    const response = await sendDMMessageServiceV2(req);
     res.status(201).json(response);
   } catch (error) {
     logger.error("Error occurred during Send DM Message:", {
