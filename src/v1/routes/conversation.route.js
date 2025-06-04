@@ -14,6 +14,7 @@ const router = Router();
 
 // Get all conversations for the authenticated user with pagination
 router.get("/get-conversation", checkToken, getAllConversations);
+router.get("/get-messages/:conversationId",checkToken , getConversationMessages);
 
 //New Route for initail fetch
 router.get(
@@ -22,12 +23,11 @@ router.get(
 );
 
 // get conversation messages by conversation id
-router.get("/:conversationId/messages", getConversationMessages);
 
 // get conversations by conversation id
 
-router.get("/:conversationId", getConversation);
+// router.get("/:conversationId", getConversation);
 
-router.get("/file-urls/getAllFileUrls", getAllFileUrls);
+// router.get("/file-urls/getAllFileUrls", getAllFileUrls);
 
 export default router;
