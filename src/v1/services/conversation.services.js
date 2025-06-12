@@ -28,6 +28,7 @@ export const getAllConversationsService = async (req) => {
                 id: true,
                 userName: true,
                 profilePictureUrl: true,
+                lastActiveAt: true
               },
             },
           },
