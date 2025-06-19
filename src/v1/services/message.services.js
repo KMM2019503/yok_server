@@ -37,6 +37,7 @@ export const sendDMMessageServiceV2 = async (req) => {
           content: true,
           status: true,
           createdAt: true,
+          sender: true,
           messageType: true,
           conversationId: true,
         },
