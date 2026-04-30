@@ -4,11 +4,21 @@
   "type": "module",
   "scripts": {
     "dev": "bun --watch index.ts",
-    "start": "bun index.ts"
+    "start": "bun index.ts",
+    "lint": "eslint \"**/*.{ts,tsx,mts,cts}\"",
+    "lint:fix": "eslint \"**/*.{ts,tsx,mts,cts}\" --fix",
+    "lint:all": "eslint .",
+    "lint:all:fix": "eslint . --fix"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@types/bun": "latest",
-    "@types/cookie-parser": "^1.4.7"
+    "@types/cookie-parser": "^1.4.7",
+    "eslint": "^9.39.4",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-n": "^17.24.0",
+    "globals": "^17.5.0",
+    "typescript-eslint": "^8.59.1"
   },
   "peerDependencies": {
     "typescript": "^5.6.3"
