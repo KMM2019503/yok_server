@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import logger from "../../../v1/utils/logger";
+import logger from "../../utils/logger";
 import { ChannelsRepository } from "./channels.repository";
 import { ChannelsService } from "./channels.service";
 import { sendChannelResponse, withMessage } from "./channels.mapper";

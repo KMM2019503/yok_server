@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { ValidationError, UnauthorizedError } from "../../shared/errors";
-import { generateJwtTokenAndSetCookie } from "../../../v1/utils/generateJwtTokenAndSetCookie.utils.js";
+import { generateJwtToken } from "./auth.jwt";
 import type { LoginBody, SignUpBody } from "./auth.types";
 import type { AuthRepository } from "./auth.repository";
 
@@ -20,7 +20,7 @@ export class AuthService {
       throw new UnauthorizedError("Invalid email or password");
     }
 
-    const token = generateJwtTokenAndSetCookie(user, user.passwordHash);
+    const token = generateJwtToken(user.id, user.passwordHash);
 
     return {
       token,
@@ -59,7 +59,7 @@ export class AuthService {
       userUniqueID,
     });
 
-    const token = generateJwtTokenAndSetCookie(newUser, newUser.passwordHash);
+    const token = generateJwtToken(newUser.id, newUser.passwordHash);
 
     return {
       token,

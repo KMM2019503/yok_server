@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import logger from "../../../v1/utils/logger";
+import logger from "../../utils/logger";
 import { AuthRepository } from "./auth.repository";
 import { AuthService } from "./auth.service";
 import { sendLoginResponse, sendLogoutResponse, sendSignUpResponse } from "./auth.mapper";

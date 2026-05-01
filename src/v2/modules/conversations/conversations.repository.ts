@@ -2,7 +2,7 @@ import {
   getAllConversationsService,
   getConversationMessagesService,
   getLatestMessagesInConversationsService,
-} from "../../../v1/services/conversation.services.js";
+} from "../../services/conversation.services.js";
 import { buildLegacyRequest } from "../../shared/legacy/legacy-request";
 
 export class ConversationsRepository {

@@ -4,7 +4,7 @@ import {
   sendChannelMessageService,
   sendDMMessageServiceV2,
   sendGroupMessageService,
-} from "../../../v1/services/message.services.js";
+} from "../../services/message.services.js";
 import { buildLegacyRequest } from "../../shared/legacy/legacy-request";
 
 export class MessagesRepository {

@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import logger from "../../../v1/utils/logger";
+import logger from "../../utils/logger";
 import { UsersRepository } from "./users.repository";
 import { UsersService } from "./users.service";
 import {

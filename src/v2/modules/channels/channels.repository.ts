@@ -14,7 +14,7 @@ import {
   removeAdminService,
   removeMemberFromChannelService,
   updateChannelService,
-} from "../../../v1/services/channel.services.js";
+} from "../../services/channel.services.js";
 import { buildLegacyRequest } from "../../shared/legacy/legacy-request";
 
 export class ChannelsRepository {

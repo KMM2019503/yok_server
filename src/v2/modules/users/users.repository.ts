@@ -4,7 +4,7 @@ import {
   fetchUserByPhoneNumberService,
   removeFcmTokenService,
   updateUserService,
-} from "../../../v1/services/users.services.js";
+} from "../../services/users.services.js";
 import { buildLegacyRequest } from "../../shared/legacy/legacy-request";
 
 export class UsersRepository {
