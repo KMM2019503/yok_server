@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import startServer from "./src/server";
 
-dotenv.config(); // Load environment variables
+startServer();
 
-void startServer();
+dotenv.config(); // Load environment variables

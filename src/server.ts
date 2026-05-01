@@ -14,7 +14,6 @@ import prisma, { connectToDatabase } from "../prisma/prismaClient.js";
 import cron from "node-cron";
 import { deleteStaleFcmTokenServices } from "./v1/services/commonService.js";
 import cors from "cors";
-import { createV2App } from "./v2/app/create-app";
 
 
 dotenv.config(); // Load environment variables
@@ -45,7 +44,6 @@ const startServer = async() => {
 
   // Use routes
   app.use("/v1/", routes);
-  app.use("/v2", createV2App());
 
   app.get("/healthy", (req: Request, res: Response) => {
     res.status(200).json({
