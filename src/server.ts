@@ -4,15 +4,13 @@ import express, {
   type Response,
   type NextFunction,
 } from "express";
-import logger from "./v1/utils/logger"; // Import the logger
-import routes from "./v1/routes"; // Import your routes
-import applyMiddlewares from "./v1/middlewares";
+import logger from "./v2/utils/logger";
 import cookieParser from "cookie-parser";
 import { app, server } from "../socket/Socket.js";
 import prisma, { connectToDatabase } from "../prisma/prismaClient.js";
 // @ts-ignore
 import cron from "node-cron";
-import { deleteStaleFcmTokenServices } from "./v1/services/commonService.js";
+import { deleteStaleFcmTokenServices } from "./v2/services/common.services.js";
 import cors from "cors";
 import { createV2App } from "./v2/app/create-app";
 
@@ -40,11 +38,8 @@ const startServer = async() => {
       credentials: true,
     })
   )
-  // Apply middlewares
-  applyMiddlewares(app);
 
   // Use routes
-  app.use("/v1/", routes);
   app.use("/v2", createV2App());
 
   app.get("/healthy", (req: Request, res: Response) => {

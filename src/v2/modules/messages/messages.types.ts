@@ -1,24 +1,59 @@
+export type DirectMessageBody = {
+  content: string;
+  conversationId?: string;
+  receiverId: string;
+  photoUrl?: string[];
+  fileUrls?: string[];
+  originalMessageId?: string;
+};
+
+export type ChannelInvitationBody = {
+  phoneNumbers: string[];
+  channelId: string;
+};
+
+export type GroupMessageBody = {
+  content?: string;
+  groupId: string;
+  photoUrl?: string[];
+  fileUrls?: string[];
+};
+
+export type ChannelMessageBody = {
+  content?: string;
+  channelId: string;
+  photoUrl?: string[];
+  fileUrls?: string[];
+};
+
+export type ChannelCommentBody = {
+  content: string;
+  messageId: string;
+};
+
 export type DirectMessageInput = {
   userId: string;
-  body: Record<string, unknown>;
+  body: DirectMessageBody;
 };
 
 export type ChannelInvitationInput = {
   userId: string;
-  body: Record<string, unknown>;
+  body: ChannelInvitationBody;
 };
 
 export type GroupMessageInput = {
   userId: string;
-  body: Record<string, unknown>;
+  body: GroupMessageBody;
 };
 
 export type ChannelMessageInput = {
   userId: string;
-  body: Record<string, unknown>;
+  body: ChannelMessageBody;
 };
 
 export type ChannelCommentInput = {
   userId: string;
-  body: Record<string, unknown>;
+  body: ChannelCommentBody;
 };
+
+export type MessageServiceResult = Record<string, unknown>;

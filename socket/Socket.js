@@ -1,10 +1,13 @@
 import { Server } from "socket.io";
 import http from "http";
 import express from "express";
-import logger from "../src/v1/utils/logger";
+import logger from "../src/v2/utils/logger";
 import prisma from "../prisma/prismaClient";
 import jwt from "jsonwebtoken";
-import { deleteUserLocation, updateUserLocation } from "../src/v1/services/location.services";
+import {
+  deleteUserLocation,
+  updateUserLocation,
+} from "../src/v2/services/location.services.js";
 
 const app = express();
 const server = http.createServer(app);

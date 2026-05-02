@@ -1,34 +1,33 @@
-// Stores user locations
 import prisma from "../../../prisma/prismaClient";
 
 export const usersLocation = [];
 
 export const updateUserLocation = (userId, location) => {
   const existingUserIndex = usersLocation.findIndex(
-    (user) => user.userId === userId
+    (user) => user.userId === userId,
   );
 
   if (existingUserIndex !== -1) {
     usersLocation[existingUserIndex] = { userId, location };
-  } else {
-    usersLocation.push({ userId, location });
+    return;
   }
 
-  console.log("🚀 ~ updateUserLocation ~ usersLocation:", usersLocation);
+  usersLocation.push({ userId, location });
 };
 
 export const deleteUserLocation = (userId) => {
   const existingUserIndex = usersLocation.findIndex(
-    (user) => user.userId === userId
+    (user) => user.userId === userId,
   );
 
-  if (existingUserIndex !== -1) {
-    usersLocation.splice(existingUserIndex, 1);
+  if (existingUserIndex === -1) {
+    return;
   }
+
+  usersLocation.splice(existingUserIndex, 1);
 };
 
 export const findNearUsers = async (userId, currentLocation, maxDistance) => {
-  // Validate input parameters
   if (!userId || typeof userId !== "string") {
     throw new Error("Valid userId must be provided");
   }
@@ -39,7 +38,7 @@ export const findNearUsers = async (userId, currentLocation, maxDistance) => {
     typeof currentLocation.longitude !== "number"
   ) {
     throw new Error(
-      "Valid currentLocation with latitude and longitude must be provided"
+      "Valid currentLocation with latitude and longitude must be provided",
     );
   }
 
@@ -47,25 +46,19 @@ export const findNearUsers = async (userId, currentLocation, maxDistance) => {
     throw new Error("maxDistance must be a positive number");
   }
 
-  // Find nearby users
   const nearbyUsers = usersLocation.filter((user) => {
-    // Skip the current user
-    if (user.userId === userId) return false;
+    if (user.userId === userId) {
+      return false;
+    }
 
-    // Calculate distance to this user
     try {
       const distance = calculateDistance(currentLocation, user.location);
       return distance <= maxDistance;
-    } catch (error) {
-      console.error(
-        `Error calculating distance for user ${user.userId}:`,
-        error
-      );
+    } catch (_error) {
       return false;
     }
   });
 
-  // If no nearby users found
   if (nearbyUsers.length === 0) {
     return {
       message: "No nearby users found within the specified distance.",
@@ -73,34 +66,27 @@ export const findNearUsers = async (userId, currentLocation, maxDistance) => {
     };
   }
 
-  // Get user details from database
-  try {
-    const users = await prisma.user.findMany({
-      where: {
-        id: { in: nearbyUsers.map((user) => user.userId) },
-      },
-      select: {
-        id: true,
-        userName: true,
-        profilePictureUrl: true,
-        email: true,
-        userUniqueID: true,
-        lastActiveAt: true,
-      },
-    });
+  const users = await prisma.user.findMany({
+    where: {
+      id: { in: nearbyUsers.map((user) => user.userId) },
+    },
+    select: {
+      id: true,
+      userName: true,
+      profilePictureUrl: true,
+      email: true,
+      userUniqueID: true,
+      lastActiveAt: true,
+    },
+  });
 
-    return {
-      message: "Successfully found nearby users within the specified distance.",
-      users: users,
-    };
-  } catch (error) {
-    console.error("Error fetching user details:", error);
-    throw new Error("Failed to fetch nearby user details");
-  }
+  return {
+    message: "Successfully found nearby users within the specified distance.",
+    users,
+  };
 };
 
 export const calculateDistance = (loc1, loc2) => {
-  // Validate input locations
   if (!loc1 || !loc2) {
     throw new Error("Both locations must be provided");
   }
@@ -114,10 +100,7 @@ export const calculateDistance = (loc1, loc2) => {
     throw new Error("Locations must have numeric latitude and longitude");
   }
 
-  // Convert degrees to radians
   const toRad = (deg) => deg * (Math.PI / 180);
-
-  // Earth's radius in km
   const R = 6371;
 
   const lat1 = toRad(loc1.latitude);
@@ -128,7 +111,6 @@ export const calculateDistance = (loc1, loc2) => {
   const dLat = lat2 - lat1;
   const dLon = lon2 - lon1;
 
-  // Haversine formula
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);

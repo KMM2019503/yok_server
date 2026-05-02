@@ -1,4 +1,4 @@
-// v1/prismaClient.ts
+// Shared Prisma client
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();

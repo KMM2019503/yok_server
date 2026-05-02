@@ -1,70 +1,46 @@
-import {
-  sendChannelInvitationService,
-  sendChannelMessageCommentService,
-  sendChannelMessageService,
-  sendDMMessageServiceV2,
-  sendGroupMessageService,
-} from "../../services/message.services.js";
-import { buildLegacyRequest } from "../../shared/legacy/legacy-request";
+import { messageServices } from "../../services/message.services";
+import type {
+  ChannelCommentBody,
+  ChannelInvitationBody,
+  ChannelMessageBody,
+  DirectMessageBody,
+  GroupMessageBody,
+  MessageServiceResult,
+} from "./messages.types";
 
 export class MessagesRepository {
   sendDirectMessage(
     userId: string,
-    body: Record<string, unknown>,
-  ): Promise<Record<string, unknown>> {
-    const request = buildLegacyRequest({
-      userId,
-      body,
-    });
-
-    return sendDMMessageServiceV2(request);
+    body: DirectMessageBody,
+  ): Promise<MessageServiceResult> {
+    return messageServices.sendDirectMessage(userId, body);
   }
 
   sendChannelInvitation(
     userId: string,
-    body: Record<string, unknown>,
-  ): Promise<Record<string, unknown>> {
-    const request = buildLegacyRequest({
-      userId,
-      body,
-    });
-
-    return sendChannelInvitationService(request);
+    body: ChannelInvitationBody,
+  ): Promise<MessageServiceResult> {
+    return messageServices.sendChannelInvitation(userId, body);
   }
 
   sendGroupMessage(
     userId: string,
-    body: Record<string, unknown>,
-  ): Promise<Record<string, unknown>> {
-    const request = buildLegacyRequest({
-      userId,
-      body,
-    });
-
-    return sendGroupMessageService(request);
+    body: GroupMessageBody,
+  ): Promise<MessageServiceResult> {
+    return messageServices.sendGroupMessage(userId, body);
   }
 
   sendChannelMessage(
     userId: string,
-    body: Record<string, unknown>,
-  ): Promise<Record<string, unknown>> {
-    const request = buildLegacyRequest({
-      userId,
-      body,
-    });
-
-    return sendChannelMessageService(request);
+    body: ChannelMessageBody,
+  ): Promise<MessageServiceResult> {
+    return messageServices.sendChannelMessage(userId, body);
   }
 
   sendChannelMessageComment(
     userId: string,
-    body: Record<string, unknown>,
-  ): Promise<Record<string, unknown>> {
-    const request = buildLegacyRequest({
-      userId,
-      body,
-    });
-
-    return sendChannelMessageCommentService(request);
+    body: ChannelCommentBody,
+  ): Promise<MessageServiceResult> {
+    return messageServices.sendChannelComment(userId, body);
   }
 }
