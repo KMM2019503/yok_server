@@ -53,3 +53,19 @@ Ensure you have the following installed:
 
    - Ensure that all environment variables required for your application are defined in .env.
    - The production environment will run in detached mode due to the -d flag.
+
+## API Documentation (Swagger)
+
+Swagger UI is available at:
+
+- `GET /docs`
+
+Raw OpenAPI JSON is available at:
+
+- `GET /openapi.json`
+
+Notes:
+
+- V2 endpoints in Swagger are documented under `/v2/*`.
+- If your `V2_INTERNAL_TOKEN` is enabled, add `x-internal-v2-token` in Swagger's Authorize modal.
+- Authenticated routes also require the `token` cookie (set automatically after `/v2/login` or `/v2/signup`).

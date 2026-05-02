@@ -13,6 +13,7 @@ import cron from "node-cron";
 import { deleteStaleFcmTokenServices } from "./v2/services/common.services.js";
 import cors from "cors";
 import { createV2App } from "./v2/app/create-app";
+import { registerSwaggerDocs } from "./v2/docs/swagger";
 
 
 dotenv.config(); // Load environment variables
@@ -40,6 +41,8 @@ const startServer = async() => {
   )
 
   // Use routes
+  registerSwaggerDocs(app);
+
   app.use("/v2", createV2App());
 
   app.get("/healthy", (req: Request, res: Response) => {
