@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 const baseEnvelope = {
-  params: z.object({}).passthrough(),
-  query: z.object({}).passthrough(),
+  params: z.object({}).loose(),
+  query: z.object({}).loose(),
 };
 
 const phoneNumberSchema = z
@@ -20,14 +20,14 @@ const updateUserBodySchema = z
     dob: z.string().trim().min(1).optional(),
     dateOfBirth: z.string().trim().min(1).optional(),
   })
-  .passthrough();
+  .loose();
 
 export const findUserByPhoneSchema = z.object({
   params: z.object({
     phoneNumber: phoneNumberSchema,
   }),
   query: baseEnvelope.query,
-  body: z.object({}).passthrough(),
+  body: z.object({}).loose(),
 });
 
 export const updateUserSchema = z.object({
@@ -40,12 +40,12 @@ export const deleteUserSchema = z.object({
     userId: z.string().trim().min(1),
   }),
   query: baseEnvelope.query,
-  body: z.object({}).passthrough(),
+  body: z.object({}).loose(),
 });
 
 export const fcmTokenSchema = z.object({
   ...baseEnvelope,
   body: z.object({
     fcmToken: z.string().trim().min(1),
-  }).passthrough(),
+  }).loose(),
 });

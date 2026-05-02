@@ -6,9 +6,9 @@ export const loginSchema = z.object({
       email: z.string().email(),
       password: z.string().min(1),
     })
-    .passthrough(),
-  params: z.object({}).passthrough(),
-  query: z.object({}).passthrough(),
+    .loose(),
+  params: z.object({}).loose(),
+  query: z.object({}).loose(),
 });
 
 export const signUpSchema = z.object({
@@ -21,7 +21,7 @@ export const signUpSchema = z.object({
       dob: z.string().optional(),
       passwords: z.string().min(1),
     })
-    .passthrough(),
-  params: z.object({}).passthrough(),
-  query: z.object({}).passthrough(),
+    .loose(),
+  params: z.object({}).loose(),
+  query: z.object({}).loose(),
 });

@@ -47,7 +47,7 @@
     "swagger-ui-express": "^5.0.1",
     "ts-node": "^10.9.2",
     "winston": "^3.14.2",
-    "zod": "^4.4.1"
+    "zod": "^4.4.2"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.js"

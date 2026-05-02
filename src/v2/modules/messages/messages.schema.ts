@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 const baseEnvelope = {
-  params: z.object({}).passthrough(),
-  query: z.object({}).passthrough(),
+  params: z.object({}).loose(),
+  query: z.object({}).loose(),
 };
 
 export const sendDirectMessageSchema = z.object({
@@ -16,7 +16,7 @@ export const sendDirectMessageSchema = z.object({
       fileUrls: z.array(z.string()).optional(),
       originalMessageId: z.string().optional(),
     })
-    .passthrough(),
+    .loose(),
 });
 
 export const sendChannelInvitationSchema = z.object({
@@ -26,7 +26,7 @@ export const sendChannelInvitationSchema = z.object({
       phoneNumbers: z.array(z.string().min(1)).min(1),
       channelId: z.string().min(1),
     })
-    .passthrough(),
+    .loose(),
 });
 
 export const sendGroupMessageSchema = z.object({
@@ -38,7 +38,7 @@ export const sendGroupMessageSchema = z.object({
       photoUrl: z.array(z.string()).optional(),
       fileUrls: z.array(z.string()).optional(),
     })
-    .passthrough(),
+    .loose(),
 });
 
 export const sendChannelMessageSchema = z.object({
@@ -50,7 +50,7 @@ export const sendChannelMessageSchema = z.object({
       photoUrl: z.array(z.string()).optional(),
       fileUrls: z.array(z.string()).optional(),
     })
-    .passthrough(),
+    .loose(),
 });
 
 export const sendChannelCommentSchema = z.object({
@@ -60,5 +60,5 @@ export const sendChannelCommentSchema = z.object({
       content: z.string().min(1),
       messageId: z.string().min(1),
     })
-    .passthrough(),
+    .loose(),
 });

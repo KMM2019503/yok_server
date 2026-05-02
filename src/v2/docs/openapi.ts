@@ -62,7 +62,7 @@ const genericSuccessResponseSchema = registry.register(
 
 const genericErrorResponseSchema = registry.register(
   "GenericErrorResponse",
-  z.object({ error: z.string() }).passthrough(),
+  z.object({ error: z.string() }).loose(),
 );
 
 const authErrorResponseSchema = registry.register(
@@ -72,12 +72,12 @@ const authErrorResponseSchema = registry.register(
       success: z.boolean().optional(),
       message: z.string(),
     })
-    .passthrough(),
+    .loose(),
 );
 
 const forbiddenResponseSchema = registry.register(
   "ForbiddenResponse",
-  z.object({ message: z.string() }).passthrough(),
+  z.object({ message: z.string() }).loose(),
 );
 
 const validationErrorResponseSchema = registry.register(

@@ -8,8 +8,8 @@ const schema = z.object({
   body: z.object({
     name: z.string().min(1),
   }),
-  params: z.object({}).passthrough(),
-  query: z.object({}).passthrough(),
+  params: z.object({}).loose(),
+  query: z.object({}).loose(),
 });
 
 describe("validate middleware", () => {
