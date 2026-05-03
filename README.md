@@ -1,71 +1,150 @@
-# Project Setup
+# Yok Server
 
-This document provides instructions for setting up the project, including configuration and running the development and production environments.
+Backend server for Yok chat features, built with Bun, Express, Prisma (MongoDB), and Socket.IO.
+
+## Stack
+
+- Bun runtime
+- Express API (`/v2` modular routes)
+- Prisma + MongoDB
+- Socket.IO real-time events
+- Zod validation + generated OpenAPI docs
 
 ## Prerequisites
 
-Ensure you have the following installed:
+- Bun `>=1.x`
+- MongoDB instance (local or hosted)
 
-- [Bun](https://bun.sh/)
-- [Docker](https://www.docker.com/)
-- [Docker Compose](https://docs.docker.com/compose/)
+Optional for containerized runs:
 
-## Project Structure
+- Docker
+- Docker Compose
 
-- Place your Firebase service account key in the project folder as `firebase-service-keys.json`.
-- in project folder, there should be a script called `source_env.sh` to manage your environment variables.
+## Quick Start (Local)
 
-## Setup Instructions
+1. Install dependencies:
 
-1. **Generate Prisma Client (if required):**
+```bash
+bun install
+```
 
-   Run the following command to generate the Prisma client:
+2. Create a `.env` file:
 
-   ```bash
-   bunx prisma generate
-   ```
+```env
+DATABASE_URL="mongodb+srv://<user>:<password>@<cluster>/<db>?retryWrites=true&w=majority"
+JWT_SECRET_KEY="<your-secret>"
+PORT=8888
+NODE_ENV=development
 
-2. **Set Permissions on the Environment Script:**
+# V2 API gate (required for any /v2 endpoint)
+V2_INTERNAL_ENABLED=true
 
-   Make the source_env.sh script executable:
+# Optional extra gate on /v2
+V2_INTERNAL_TOKEN=""
 
-   ```bash
-    chmod +x source_env.sh
-   ```
+# Optional (defined in env schema; currently not wired in `src/server.ts` CORS setup)
+CORS_ORIGIN="http://localhost:3000"
+```
 
-3. **Running the Development Environment:**
+3. Generate Prisma client and sync schema:
 
-   To start the development environment, run:
+```bash
+bunx prisma generate
+bunx prisma db push
+```
 
-   ```bash
-   source ./source_env.sh && docker-compose up --build
-   ```
+4. Start dev server:
 
-4. **Running the Production Environment:**
+```bash
+bun run dev
+```
 
-   To start the production environment, run:
+Server starts from [`index.ts`](/Users/betterhr/Developer/personal/yok_server/index.ts) and listens on `PORT` (default `8888`).
 
-   ```bash
-   source ./source_env.sh && docker-compose -f docker-compose.prod.yml up --build -d
-   ```
+## Important: `/v2` Internal Gate
 
-   _Notes_
+All `/v2/*` routes are protected by [`internal-v2-gate.ts`](/Users/betterhr/Developer/personal/yok_server/src/v2/shared/middleware/internal-v2-gate.ts).
 
-   - Ensure that all environment variables required for your application are defined in .env.
-   - The production environment will run in detached mode due to the -d flag.
+- If `V2_INTERNAL_ENABLED=false` (or unset), `/v2/*` returns `404`.
+- If `V2_INTERNAL_TOKEN` is set, clients must send header:
 
-## API Documentation (Swagger)
+```http
+x-internal-v2-token: <your-token>
+```
 
-Swagger UI is available at:
+## Authentication Model
 
-- `GET /docs`
+- Login/signup endpoints set an HTTP-only cookie named `token`.
+- Protected routes use cookie auth (`requireAuth` middleware).
+- Socket.IO auth also reads the same `token` cookie during handshake.
 
-Raw OpenAPI JSON is available at:
+## API Docs
 
-- `GET /openapi.json`
+- Swagger UI: `GET /docs`
+- OpenAPI JSON: `GET /openapi.json`
+- Health check: `GET /healthy`
+- V2 health check: `GET /v2/healthy` (subject to the internal gate rules above)
 
-Notes:
+## Main Route Groups
 
-- V2 endpoints in Swagger are documented under `/v2/*`.
-- If your `V2_INTERNAL_TOKEN` is enabled, add `x-internal-v2-token` in Swagger's Authorize modal.
-- Authenticated routes also require the `token` cookie (set automatically after `/v2/login` or `/v2/signup`).
+- `POST /v2/login`
+- `POST /v2/signup`
+- `GET /v2/logout`
+- `GET /v2/checkAuth`
+- `GET|POST|PUT|DELETE /v2/channels/*`
+- `POST /v2/messages/*`
+- `GET /v2/conversations/*`
+- `GET|POST|DELETE /v2/users/*`
+
+See full request/response contracts in Swagger.
+
+## Scripts
+
+- `bun run dev` - Run with watch mode
+- `bun run start` - Run server
+- `bun run test` - Run tests
+- `bun run lint` - Lint TS files
+- `bun run lint:fix` - Auto-fix lint issues
+
+## Testing
+
+Current test suites include:
+
+- Unit tests
+- Repository tests
+- Middleware tests
+- Contract tests
+- Integration smoke test
+
+Run all with:
+
+```bash
+bun test
+```
+
+## Docker
+
+Development compose:
+
+```bash
+source ./source_env.sh && docker-compose up --build
+```
+
+Production compose:
+
+```bash
+source ./source_env.sh && docker-compose -f docker-compose.prod.yml up --build -d
+```
+
+Note:
+
+- Compose maps host `3000:3000`, so set `PORT=3000` in `.env` for Docker runs (or change compose port mapping).
+
+## Project Layout
+
+- [`src/server.ts`](/Users/betterhr/Developer/personal/yok_server/src/server.ts) - app bootstrap, middleware, health routes, cron, shutdown
+- [`src/v2/app/`](/Users/betterhr/Developer/personal/yok_server/src/v2/app) - v2 router setup
+- [`src/v2/modules/`](/Users/betterhr/Developer/personal/yok_server/src/v2/modules) - feature modules (auth, users, channels, messages, conversations)
+- [`src/v2/docs/openapi.ts`](/Users/betterhr/Developer/personal/yok_server/src/v2/docs/openapi.ts) - OpenAPI registry/document generation
+- [`socket/Socket.js`](/Users/betterhr/Developer/personal/yok_server/socket/Socket.js) - Socket.IO server and realtime events
+- [`prisma/schema.prisma`](/Users/betterhr/Developer/personal/yok_server/prisma/schema.prisma) - MongoDB data model
