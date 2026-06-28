@@ -32,6 +32,7 @@ tags later power **friend** and **channel** suggestions.
   - `POST /v2/profile/skip`
   - `PUT /v2/profile/tags`
   - `GET /v2/profile/me`
+  - `PUT /v2/profile/me`
   - `GET /v2/profile/:userId`
 - OpenAPI route mirroring is done in `src/v2/docs/openapi.ts`.
 - Unit tests for the service/repository seam are in place with a mocked extractor.
@@ -103,6 +104,7 @@ All routes require `requireAuth` and (locally) the `/v2` internal gate.
 | `POST` | `/v2/profile/skip` | — | persisted profile, `status: SKIPPED`. |
 | `PUT` | `/v2/profile/tags` | `{ tags: string[] }` (slugs ⊂ vocabulary) | persisted profile, `status: READY`. |
 | `GET` | `/v2/profile/me` | — | the caller's profile. |
+| `PUT` | `/v2/profile/me` | core user fields, optional `story`, optional `tags` | unified profile update for account info + persona data. |
 | `GET` | `/v2/profile/:userId` | — | public view of another user's tags. |
 
 Phase 2 adds: `GET /v2/suggestions/friends`, later `GET /v2/suggestions/channels`.

@@ -13,6 +13,7 @@ architecture.
 | Doc | What it covers |
 |---|---|
 | [repo-map.md](repo-map.md) | Full map of the current repo — every section, file-referenced. The reference for how a request flows and where to add code. |
+| [api/profile-frontend.md](api/profile-frontend.md) | Frontend-facing contract for profile/account endpoints, onboarding story/tag flow, auth requirements, example payloads, and error cases. |
 | [features/persona-profiling.md](features/persona-profiling.md) | Plan plus live implementation status for the AI persona / "character tags" feature (backend + frontend checkpoint, Gemini + controlled vocabulary + user review). |
 
 ## Related

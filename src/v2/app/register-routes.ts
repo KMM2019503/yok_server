@@ -7,6 +7,7 @@ import messageRoutes from "../modules/messages/messages.routes";
 import conversationRoutes from "../modules/conversations/conversations.routes";
 import friendRoutes from "../modules/friends/friends.routes";
 import profileRoutes from "../modules/profiles/profiles.routes";
+import suggestionRoutes from "../modules/suggestions/suggestions.routes";
 
 export const registerRoutes = (router: Router) => {
   router.get("/healthy", (_req: Request, res: Response) => {
@@ -24,4 +25,5 @@ export const registerRoutes = (router: Router) => {
   router.use("/conversations", conversationRoutes);
   router.use("/friends", friendRoutes);
   router.use("/profile", profileRoutes);
+  router.use("/suggestions", suggestionRoutes);
 };

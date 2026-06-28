@@ -1,17 +1,38 @@
 import { describe, expect, it } from "bun:test";
 import { env } from "../../config/env";
-import { AppError, ValidationError } from "../../shared/errors";
+import {
+  AppError,
+  ConflictError,
+  ValidationError,
+} from "../../shared/errors";
 import { ProfilesRepository } from "../../modules/profiles/profiles.repository";
 
+const buildUser = (overrides: Partial<Record<string, unknown>> = {}) => ({
+  id: "u1",
+  email: "user@example.com",
+  userName: "Pulse User",
+  userUniqueID: "P#1001",
+  gender: "M",
+  dateOfBirth: new Date("1995-04-12T00:00:00.000Z"),
+  profilePictureUrl: "https://example.com/avatar.png",
+  lastActiveAt: new Date("2026-06-28T08:00:00.000Z"),
+  createdAt: new Date("2026-06-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-06-15T00:00:00.000Z"),
+  ...overrides,
+});
+
 describe("ProfilesRepository", () => {
-  it("stores preview data from the injected extractor", async () => {
+  it("stores preview data from the injected extractor and returns user info", async () => {
     const now = new Date("2026-06-28T12:00:00.000Z");
     let upsertArgs: Record<string, unknown> | undefined;
 
     const repository = new ProfilesRepository(
       {
         user: {
-          findUnique: () => Promise.resolve({ id: "u1" }),
+          findUnique: () => Promise.resolve(buildUser()),
+          update: () => {
+            throw new Error("not used");
+          },
         },
         userProfile: {
           findUnique: () => Promise.resolve(null),
@@ -73,6 +94,7 @@ describe("ProfilesRepository", () => {
 
     expect(upsertArgs).toBeDefined();
     expect(response.success).toBe(true);
+    expect(response.user.userName).toBe("Pulse User");
     expect(response.profile?.status).toBe("AWAITING_REVIEW");
     expect(response.profile?.confirmedTagSlugs).toEqual([]);
     expect(response.profile?.aiTagSlugs).toEqual(["developer", "football"]);
@@ -87,7 +109,10 @@ describe("ProfilesRepository", () => {
     const repository = new ProfilesRepository(
       {
         user: {
-          findUnique: () => Promise.resolve({ id: "u1" }),
+          findUnique: () => Promise.resolve(buildUser()),
+          update: () => {
+            throw new Error("not used");
+          },
         },
         userProfile: {
           findUnique: () => Promise.resolve({
@@ -135,7 +160,10 @@ describe("ProfilesRepository", () => {
     const repository = new ProfilesRepository(
       {
         user: {
-          findUnique: () => Promise.resolve({ id: "u1" }),
+          findUnique: () => Promise.resolve(buildUser()),
+          update: () => {
+            throw new Error("not used");
+          },
         },
         userProfile: {
           findUnique: () => Promise.resolve(null),
@@ -166,9 +194,133 @@ describe("ProfilesRepository", () => {
     const response = await repository.skip("u1");
 
     expect(upsertArgs).toBeDefined();
+    expect(response.user.email).toBe("user@example.com");
     expect(response.profile?.status).toBe("SKIPPED");
     expect(response.profile?.story).toBeNull();
     expect(response.profile?.tags).toEqual([]);
+  });
+
+  it("returns user info even when the caller has not created a persona profile yet", async () => {
+    const repository = new ProfilesRepository(
+      {
+        user: {
+          findUnique: () => Promise.resolve(buildUser()),
+          update: () => {
+            throw new Error("not used");
+          },
+        },
+        userProfile: {
+          findUnique: () => Promise.resolve(null),
+          upsert: () => {
+            throw new Error("not used");
+          },
+          update: () => {
+            throw new Error("not used");
+          },
+        },
+      } as never,
+      null,
+    );
+
+    const response = await repository.getMine("u1");
+
+    expect(response.user.userUniqueID).toBe("P#1001");
+    expect(response.profile).toBeNull();
+  });
+
+  it("updates core user fields from the unified profile flow", async () => {
+    let updateArgs: Record<string, unknown> | undefined;
+
+    const repository = new ProfilesRepository(
+      {
+        user: {
+          findUnique: (args: { where: { id?: string; email?: string } }) => {
+            if ("email" in args.where) {
+              return Promise.resolve(null);
+            }
+
+            return Promise.resolve(buildUser());
+          },
+          update: (args: Record<string, unknown>) => {
+            updateArgs = args;
+            return Promise.resolve(buildUser({
+              email: "new@example.com",
+              userName: "Updated User",
+              gender: null,
+              dateOfBirth: null,
+              profilePictureUrl: null,
+            }));
+          },
+        },
+        userProfile: {
+          findUnique: () => Promise.resolve(null),
+          upsert: () => {
+            throw new Error("not used");
+          },
+          update: () => {
+            throw new Error("not used");
+          },
+        },
+      } as never,
+      null,
+    );
+
+    const user = await repository.updateUserInfo("u1", {
+      email: "new@example.com",
+      userName: "Updated User",
+      gender: null,
+      dateOfBirth: null,
+      profilePictureUrl: null,
+    });
+
+    expect(updateArgs).toBeDefined();
+    expect(updateArgs?.data).toEqual({
+      email: "new@example.com",
+      userName: "Updated User",
+      gender: null,
+      dateOfBirth: null,
+      profilePictureUrl: null,
+    });
+    expect(user.email).toBe("new@example.com");
+    expect(user.profilePictureUrl).toBeNull();
+  });
+
+  it("rejects unified profile updates when the new email already belongs to another user", async () => {
+    const repository = new ProfilesRepository(
+      {
+        user: {
+          findUnique: (args: { where: { id?: string; email?: string } }) => {
+            if ("email" in args.where) {
+              return Promise.resolve({ id: "u2" });
+            }
+
+            return Promise.resolve(buildUser());
+          },
+          update: () => {
+            throw new Error("not used");
+          },
+        },
+        userProfile: {
+          findUnique: () => Promise.resolve(null),
+          upsert: () => {
+            throw new Error("not used");
+          },
+          update: () => {
+            throw new Error("not used");
+          },
+        },
+      } as never,
+      null,
+    );
+
+    try {
+      await repository.updateUserInfo("u1", {
+        email: "taken@example.com",
+      });
+      throw new Error("Expected updateUserInfo to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ConflictError);
+    }
   });
 
   it("marks the profile as failed when extraction errors", async () => {
@@ -177,7 +329,10 @@ describe("ProfilesRepository", () => {
     const repository = new ProfilesRepository(
       {
         user: {
-          findUnique: () => Promise.resolve({ id: "u1" }),
+          findUnique: () => Promise.resolve(buildUser()),
+          update: () => {
+            throw new Error("not used");
+          },
         },
         userProfile: {
           findUnique: () => Promise.resolve(null),

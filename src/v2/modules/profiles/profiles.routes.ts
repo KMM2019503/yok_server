@@ -7,6 +7,7 @@ import {
   getPublicProfile,
   skipProfile,
   submitProfileStory,
+  updateMyProfile,
 } from "./profiles.controller";
 import {
   confirmProfileTagsSchema,
@@ -14,6 +15,7 @@ import {
   profileUserIdSchema,
   skipProfileSchema,
   submitProfileStorySchema,
+  updateMyProfileSchema,
 } from "./profiles.schema";
 
 const router = Router();
@@ -22,6 +24,7 @@ router.post("/story", requireAuth, validate(submitProfileStorySchema), submitPro
 router.post("/skip", requireAuth, validate(skipProfileSchema), skipProfile);
 router.put("/tags", requireAuth, validate(confirmProfileTagsSchema), confirmProfileTags);
 router.get("/me", requireAuth, validate(getMyProfileSchema), getMyProfile);
+router.put("/me", requireAuth, validate(updateMyProfileSchema), updateMyProfile);
 router.get("/:userId", requireAuth, validate(profileUserIdSchema), getPublicProfile);
 
 export default router;

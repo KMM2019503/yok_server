@@ -48,7 +48,10 @@ import {
   profileUserIdSchema,
   skipProfileSchema,
   submitProfileStorySchema,
+  updateMyProfileSchema,
 } from "../modules/profiles/profiles.schema";
+import { TAXONOMY_CATEGORIES } from "../modules/profiles/taxonomy";
+import { listFriendSuggestionsSchema } from "../modules/suggestions/suggestions.schema";
 
 extendZodWithOpenApi(z);
 
@@ -64,6 +67,7 @@ type RouteSpec = {
   summary: string;
   tag: string;
   schema?: RequestEnvelopeSchema;
+  successSchema?: z.ZodTypeAny;
   successStatus: 200 | 201;
   requiresAuth?: boolean;
 };
@@ -114,6 +118,88 @@ const healthResponseSchema = registry.register(
     status: z.string(),
     message: z.string(),
     timestamp: z.string(),
+  }),
+);
+
+const profileTagResponseSchema = registry.register(
+  "ProfileTagResponse",
+  z.object({
+    slug: z.string(),
+    label: z.string(),
+    category: z.enum(TAXONOMY_CATEGORIES),
+    confidence: z.number(),
+  }),
+);
+
+const ownProfileUserResponseSchema = registry.register(
+  "OwnProfileUserResponse",
+  z.object({
+    id: z.string(),
+    email: z.string().email(),
+    userName: z.string(),
+    userUniqueID: z.string(),
+    gender: z.enum(["M", "F", "T"]).nullable(),
+    dateOfBirth: z.string().datetime().nullable(),
+    profilePictureUrl: z.string().url().nullable(),
+    lastActiveAt: z.string().datetime().nullable(),
+    createdAt: z.string().datetime(),
+    updatedAt: z.string().datetime(),
+  }),
+);
+
+const publicProfileUserResponseSchema = registry.register(
+  "PublicProfileUserResponse",
+  z.object({
+    id: z.string(),
+    userName: z.string(),
+    userUniqueID: z.string(),
+    profilePictureUrl: z.string().url().nullable(),
+    lastActiveAt: z.string().datetime().nullable(),
+  }),
+);
+
+const ownProfileViewResponseSchema = registry.register(
+  "OwnProfileViewResponse",
+  z.object({
+    userId: z.string(),
+    story: z.string().nullable(),
+    summary: z.string().nullable(),
+    status: z.enum(["PENDING", "SKIPPED", "AWAITING_REVIEW", "READY", "FAILED"]),
+    tags: z.array(profileTagResponseSchema),
+    confirmedTagSlugs: z.array(z.string()),
+    aiTagSlugs: z.array(z.string()),
+    suggestedTags: z.array(z.string()),
+    parsedAt: z.string().datetime().nullable(),
+    createdAt: z.string().datetime(),
+    updatedAt: z.string().datetime(),
+  }),
+);
+
+const publicProfileViewResponseSchema = registry.register(
+  "PublicProfileViewResponse",
+  z.object({
+    userId: z.string(),
+    summary: z.string().nullable(),
+    tags: z.array(profileTagResponseSchema),
+    updatedAt: z.string().datetime(),
+  }),
+);
+
+const ownProfileResponseSchema = registry.register(
+  "OwnProfileResponse",
+  z.object({
+    success: z.literal(true),
+    user: ownProfileUserResponseSchema,
+    profile: ownProfileViewResponseSchema.nullable(),
+  }),
+);
+
+const publicProfileResponseSchema = registry.register(
+  "PublicProfileResponse",
+  z.object({
+    success: z.literal(true),
+    user: publicProfileUserResponseSchema,
+    profile: publicProfileViewResponseSchema,
   }),
 );
 
@@ -171,13 +257,14 @@ const buildRequest = (
 const createResponses = (
   successStatus: 200 | 201,
   requiresAuth: boolean,
+  successSchema: z.ZodTypeAny = genericSuccessResponseSchema,
 ): RouteConfig["responses"] => {
   const responses: RouteConfig["responses"] = {
     [successStatus]: {
       description: successStatus === 201 ? "Created" : "Successful response",
       content: {
         "application/json": {
-          schema: genericSuccessResponseSchema,
+          schema: successSchema,
         },
       },
     },
@@ -605,6 +692,7 @@ const routes: RouteSpec[] = [
     summary: "Submit a story for persona parsing",
     tag: "Profile",
     schema: submitProfileStorySchema,
+    successSchema: ownProfileResponseSchema,
     successStatus: 200,
     requiresAuth: true,
   },
@@ -614,6 +702,7 @@ const routes: RouteSpec[] = [
     summary: "Skip persona onboarding for now",
     tag: "Profile",
     schema: skipProfileSchema,
+    successSchema: ownProfileResponseSchema,
     successStatus: 200,
     requiresAuth: true,
   },
@@ -623,6 +712,7 @@ const routes: RouteSpec[] = [
     summary: "Confirm persona tags",
     tag: "Profile",
     schema: confirmProfileTagsSchema,
+    successSchema: ownProfileResponseSchema,
     successStatus: 200,
     requiresAuth: true,
   },
@@ -632,6 +722,17 @@ const routes: RouteSpec[] = [
     summary: "Get my persona profile",
     tag: "Profile",
     schema: getMyProfileSchema,
+    successSchema: ownProfileResponseSchema,
+    successStatus: 200,
+    requiresAuth: true,
+  },
+  {
+    method: "put",
+    path: "/v2/profile/me",
+    summary: "Update my profile details and persona data",
+    tag: "Profile",
+    schema: updateMyProfileSchema,
+    successSchema: ownProfileResponseSchema,
     successStatus: 200,
     requiresAuth: true,
   },
@@ -641,6 +742,16 @@ const routes: RouteSpec[] = [
     summary: "Get another user's public persona profile",
     tag: "Profile",
     schema: profileUserIdSchema,
+    successSchema: publicProfileResponseSchema,
+    successStatus: 200,
+    requiresAuth: true,
+  },
+  {
+    method: "get",
+    path: "/v2/suggestions/friends",
+    summary: "Get persona-based friend suggestions",
+    tag: "Suggestions",
+    schema: listFriendSuggestionsSchema,
     successStatus: 200,
     requiresAuth: true,
   },
@@ -682,7 +793,11 @@ for (const route of routes) {
     summary: route.summary,
     tags: [route.tag],
     request: buildRequest(route.schema, route.method),
-    responses: createResponses(route.successStatus, route.requiresAuth ?? false),
+    responses: createResponses(
+      route.successStatus,
+      route.requiresAuth ?? false,
+      route.successSchema,
+    ),
     security: route.requiresAuth
       ? [{ internalToken: [], cookieAuth: [] }]
       : [{ internalToken: [] }],
@@ -711,5 +826,6 @@ export const openApiDocument = generator.generateDocument({
       description: "Conversation list and message retrieval endpoints",
     },
     { name: "Profile", description: "Persona profiling and review endpoints" },
+    { name: "Suggestions", description: "Persona-based recommendation endpoints" },
   ],
 });

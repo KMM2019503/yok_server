@@ -1,4 +1,4 @@
-import type { Prisma, ProfileStatus } from "@prisma/client";
+import type { Gender, Prisma, ProfileStatus } from "@prisma/client";
 import { z } from "zod";
 import { env } from "../../config/env";
 import prisma from "../../shared/db/prisma";
@@ -6,7 +6,12 @@ import {
   GeminiPersonaExtractor,
   type PersonaExtractor,
 } from "../../shared/ai/persona.extractor";
-import { AppError, NotFoundError, ValidationError } from "../../shared/errors";
+import {
+  AppError,
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+} from "../../shared/errors";
 import {
   ALL_VOCABULARY_SLUGS,
   getTaxonomyEntry,
@@ -15,10 +20,13 @@ import {
 } from "./taxonomy";
 import type {
   OwnProfileView,
+  OwnProfileUserView,
   ProfileResponse,
   ProfileTag,
   PublicProfileResponse,
   PublicProfileView,
+  PublicProfileUserView,
+  UpdateOwnUserInput,
 } from "./profiles.types";
 
 type UserProfileRecord = {
@@ -35,11 +43,73 @@ type UserProfileRecord = {
   updatedAt: Date;
 };
 
+const ownUserSelect = {
+  id: true,
+  email: true,
+  userName: true,
+  userUniqueID: true,
+  gender: true,
+  dateOfBirth: true,
+  profilePictureUrl: true,
+  lastActiveAt: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
+
+const publicUserSelect = {
+  id: true,
+  userName: true,
+  userUniqueID: true,
+  profilePictureUrl: true,
+  lastActiveAt: true,
+} as const;
+
+const userIdOnlySelect = {
+  id: true,
+} as const;
+
+type OwnUserRecord = {
+  id: string;
+  email: string;
+  userName: string;
+  userUniqueID: string;
+  gender: Gender | null;
+  dateOfBirth: Date | null;
+  profilePictureUrl: string | null;
+  lastActiveAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type PublicUserRecord = {
+  id: string;
+  userName: string;
+  userUniqueID: string;
+  profilePictureUrl: string | null;
+  lastActiveAt: Date | null;
+};
+
 type PrismaClientLike = {
   user: {
-    findUnique: (args: { where: { id: string }; select: { id: true } }) => Promise<{
-      id: string;
-    } | null>;
+    findUnique: {
+      (args: {
+        where: { id: string };
+        select: typeof ownUserSelect;
+      }): Promise<OwnUserRecord | null>;
+      (args: {
+        where: { id: string };
+        select: typeof publicUserSelect;
+      }): Promise<PublicUserRecord | null>;
+      (args: {
+        where: { email: string };
+        select: typeof userIdOnlySelect;
+      }): Promise<{ id: string } | null>;
+    };
+    update: (args: {
+      where: { id: string };
+      data: Record<string, unknown>;
+      select: typeof ownUserSelect;
+    }) => Promise<OwnUserRecord>;
   };
   userProfile: {
     findUnique: (args: { where: { userId: string } }) => Promise<UserProfileRecord | null>;
@@ -66,6 +136,23 @@ const clampConfidence = (confidence: number) =>
   Math.max(0, Math.min(1, Number.isFinite(confidence) ? confidence : 0));
 
 const dedupe = (values: string[]) => Array.from(new Set(values.filter(Boolean)));
+
+const parseOptionalDate = (value: string | null | undefined) => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new ValidationError("dateOfBirth must be a valid date string.");
+  }
+
+  return parsed;
+};
 
 const parseStoredTags = (value: unknown): ProfileTag[] => {
   const parsed = z.array(storedTagSchema).safeParse(value);
@@ -115,6 +202,31 @@ export class ProfilesRepository {
     return this.extractor;
   }
 
+  private toOwnUserView(user: OwnUserRecord): OwnProfileUserView {
+    return {
+      id: user.id,
+      email: user.email,
+      userName: user.userName,
+      userUniqueID: user.userUniqueID,
+      gender: user.gender,
+      dateOfBirth: user.dateOfBirth,
+      profilePictureUrl: user.profilePictureUrl,
+      lastActiveAt: user.lastActiveAt,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+  }
+
+  private toPublicUserView(user: PublicUserRecord): PublicProfileUserView {
+    return {
+      id: user.id,
+      userName: user.userName,
+      userUniqueID: user.userUniqueID,
+      profilePictureUrl: user.profilePictureUrl,
+      lastActiveAt: user.lastActiveAt,
+    };
+  }
+
   private toOwnProfileView(profile: UserProfileRecord): OwnProfileView {
     const storedTags = parseStoredTags(profile.traits);
     const fallbackConfirmedTags = profile.tags
@@ -151,6 +263,28 @@ export class ProfilesRepository {
     };
   }
 
+  private buildOwnResponse(
+    user: OwnUserRecord,
+    profile: UserProfileRecord | null,
+  ): ProfileResponse {
+    return {
+      success: true,
+      user: this.toOwnUserView(user),
+      profile: profile ? this.toOwnProfileView(profile) : null,
+    };
+  }
+
+  private buildPublicResponse(
+    user: PublicUserRecord,
+    profile: UserProfileRecord,
+  ): PublicProfileResponse {
+    return {
+      success: true,
+      user: this.toPublicUserView(user),
+      profile: this.toPublicProfileView(profile),
+    };
+  }
+
   private buildConfirmedTags(slugs: string[], existingTraits: ProfileTag[]) {
     const existingBySlug = new Map(existingTraits.map((tag) => [tag.slug, tag] as const));
 
@@ -176,15 +310,30 @@ export class ProfilesRepository {
     return Array.from(previewBySlug.values());
   }
 
-  private async ensureUserExists(userId: string) {
+  private async getOwnUserOrThrow(userId: string) {
     const user = await this.db.user.findUnique({
       where: { id: userId },
-      select: { id: true },
+      select: ownUserSelect,
     });
 
     if (!user) {
       throw new NotFoundError("User not found.");
     }
+
+    return user;
+  }
+
+  private async getPublicUserOrThrow(userId: string) {
+    const user = await this.db.user.findUnique({
+      where: { id: userId },
+      select: publicUserSelect,
+    });
+
+    if (!user) {
+      throw new NotFoundError("Profile not found.");
+    }
+
+    return user;
   }
 
   private async markFailedProfile(userId: string, story: string) {
@@ -223,8 +372,60 @@ export class ProfilesRepository {
     });
   }
 
+  async updateUserInfo(
+    userId: string,
+    updates: UpdateOwnUserInput,
+  ): Promise<OwnProfileUserView> {
+    const currentUser = await this.getOwnUserOrThrow(userId);
+
+    if (updates.email && updates.email !== currentUser.email) {
+      const existingUser = await this.db.user.findUnique({
+        where: { email: updates.email },
+        select: userIdOnlySelect,
+      });
+
+      if (existingUser && existingUser.id !== userId) {
+        throw new ConflictError("Email already in use.");
+      }
+    }
+
+    const data: Record<string, unknown> = {};
+
+    if (updates.userName !== undefined) {
+      data.userName = updates.userName;
+    }
+
+    if (updates.email !== undefined) {
+      data.email = updates.email;
+    }
+
+    if (updates.profilePictureUrl !== undefined) {
+      data.profilePictureUrl = updates.profilePictureUrl;
+    }
+
+    if (updates.gender !== undefined) {
+      data.gender = updates.gender;
+    }
+
+    if (updates.dateOfBirth !== undefined) {
+      data.dateOfBirth = parseOptionalDate(updates.dateOfBirth);
+    }
+
+    if (Object.keys(data).length === 0) {
+      return this.toOwnUserView(currentUser);
+    }
+
+    const user = await this.db.user.update({
+      where: { id: userId },
+      data,
+      select: ownUserSelect,
+    });
+
+    return this.toOwnUserView(user);
+  }
+
   async submitStory(userId: string, story: string): Promise<ProfileResponse> {
-    await this.ensureUserExists(userId);
+    const user = await this.getOwnUserOrThrow(userId);
 
     if (!env.PERSONA_AI_ENABLED) {
       throw new AppError("Persona profiling is disabled.", 503);
@@ -274,7 +475,7 @@ export class ProfilesRepository {
         },
       });
 
-      return { success: true, profile: this.toOwnProfileView(profile) };
+      return this.buildOwnResponse(user, profile);
     } catch (error) {
       await this.markFailedProfile(userId, story);
 
@@ -287,7 +488,7 @@ export class ProfilesRepository {
   }
 
   async skip(userId: string): Promise<ProfileResponse> {
-    await this.ensureUserExists(userId);
+    const user = await this.getOwnUserOrThrow(userId);
 
     const now = new Date();
     const profile = await this.db.userProfile.upsert({
@@ -322,11 +523,11 @@ export class ProfilesRepository {
       },
     });
 
-    return { success: true, profile: this.toOwnProfileView(profile) };
+    return this.buildOwnResponse(user, profile);
   }
 
   async confirmTags(userId: string, tags: string[]): Promise<ProfileResponse> {
-    await this.ensureUserExists(userId);
+    const user = await this.getOwnUserOrThrow(userId);
 
     const profile = await this.db.userProfile.findUnique({
       where: { userId },
@@ -361,23 +562,21 @@ export class ProfilesRepository {
       },
     });
 
-    return { success: true, profile: this.toOwnProfileView(updated) };
+    return this.buildOwnResponse(user, updated);
   }
 
   async getMine(userId: string): Promise<ProfileResponse> {
-    await this.ensureUserExists(userId);
+    const user = await this.getOwnUserOrThrow(userId);
 
     const profile = await this.db.userProfile.findUnique({
       where: { userId },
     });
 
-    return {
-      success: true,
-      profile: profile ? this.toOwnProfileView(profile) : null,
-    };
+    return this.buildOwnResponse(user, profile);
   }
 
   async getPublic(userId: string): Promise<PublicProfileResponse> {
+    const user = await this.getPublicUserOrThrow(userId);
     const profile = await this.db.userProfile.findUnique({
       where: { userId },
     });
@@ -386,9 +585,6 @@ export class ProfilesRepository {
       throw new NotFoundError("Profile not found.");
     }
 
-    return {
-      success: true,
-      profile: this.toPublicProfileView(profile),
-    };
+    return this.buildPublicResponse(user, profile);
   }
 }
