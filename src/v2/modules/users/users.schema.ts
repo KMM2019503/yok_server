@@ -22,6 +22,44 @@ const updateUserBodySchema = z
   })
   .loose();
 
+export const searchUsersSchema = z.object({
+  params: z.object({}).loose(),
+  query: z
+    .object({
+      q: z.string().trim().min(1, "Search query is required").max(100),
+    })
+    .loose(),
+  body: z.object({}).loose(),
+});
+
+export const updateLocationSchema = z.object({
+  ...baseEnvelope,
+  body: z
+    .object({
+      latitude: z.number().min(-90).max(90),
+      longitude: z.number().min(-180).max(180),
+    })
+    .loose(),
+});
+
+// `maxDistance` is expressed in kilometres and defaults to 5 km in the controller.
+export const nearbyUsersSchema = z.object({
+  params: z.object({}).loose(),
+  query: z
+    .object({
+      latitude: z.coerce.number().min(-90).max(90),
+      longitude: z.coerce.number().min(-180).max(180),
+      maxDistance: z.coerce.number().positive().max(500).optional(),
+    })
+    .loose(),
+  body: z.object({}).loose(),
+});
+
+export const removeLocationSchema = z.object({
+  ...baseEnvelope,
+  body: z.object({}).loose(),
+});
+
 export const findUserByPhoneSchema = z.object({
   params: z.object({
     phoneNumber: phoneNumberSchema,

@@ -1,5 +1,25 @@
 import type { Response } from "express";
 
+export const sendSearchUsersResponse = (
+  res: Response,
+  payload: Record<string, unknown>,
+) => res.status(200).json(payload);
+
+export const sendUpdateLocationResponse = (
+  res: Response,
+  payload: Record<string, unknown>,
+) => res.status(200).json(payload);
+
+export const sendNearbyUsersResponse = (
+  res: Response,
+  payload: Record<string, unknown>,
+) => res.status(200).json(payload);
+
+export const sendRemoveLocationResponse = (
+  res: Response,
+  payload: Record<string, unknown>,
+) => res.status(200).json(payload);
+
 export const sendUpdateUserResponse = (
   res: Response,
   payload: Record<string, unknown>,
