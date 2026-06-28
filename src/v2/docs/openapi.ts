@@ -42,6 +42,13 @@ import {
   listFriendsSchema,
   sendFriendRequestSchema,
 } from "../modules/friends/friends.schema";
+import {
+  confirmProfileTagsSchema,
+  getMyProfileSchema,
+  profileUserIdSchema,
+  skipProfileSchema,
+  submitProfileStorySchema,
+} from "../modules/profiles/profiles.schema";
 
 extendZodWithOpenApi(z);
 
@@ -592,6 +599,51 @@ const routes: RouteSpec[] = [
     successStatus: 200,
     requiresAuth: true,
   },
+  {
+    method: "post",
+    path: "/v2/profile/story",
+    summary: "Submit a story for persona parsing",
+    tag: "Profile",
+    schema: submitProfileStorySchema,
+    successStatus: 200,
+    requiresAuth: true,
+  },
+  {
+    method: "post",
+    path: "/v2/profile/skip",
+    summary: "Skip persona onboarding for now",
+    tag: "Profile",
+    schema: skipProfileSchema,
+    successStatus: 200,
+    requiresAuth: true,
+  },
+  {
+    method: "put",
+    path: "/v2/profile/tags",
+    summary: "Confirm persona tags",
+    tag: "Profile",
+    schema: confirmProfileTagsSchema,
+    successStatus: 200,
+    requiresAuth: true,
+  },
+  {
+    method: "get",
+    path: "/v2/profile/me",
+    summary: "Get my persona profile",
+    tag: "Profile",
+    schema: getMyProfileSchema,
+    successStatus: 200,
+    requiresAuth: true,
+  },
+  {
+    method: "get",
+    path: "/v2/profile/{userId}",
+    summary: "Get another user's public persona profile",
+    tag: "Profile",
+    schema: profileUserIdSchema,
+    successStatus: 200,
+    requiresAuth: true,
+  },
 ];
 
 for (const route of routes) {
@@ -658,5 +710,6 @@ export const openApiDocument = generator.generateDocument({
       name: "Conversations",
       description: "Conversation list and message retrieval endpoints",
     },
+    { name: "Profile", description: "Persona profiling and review endpoints" },
   ],
 });
