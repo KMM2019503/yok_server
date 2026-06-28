@@ -1,6 +1,6 @@
-# Yok Server
+# Pulse API
 
-Backend server for Yok chat features, built with Bun, Express, Prisma (MongoDB), and Socket.IO.
+Backend for **Pulse**, a real-time chat app — built with Bun, Express, Prisma (MongoDB), and Socket.IO. Pairs with the [`pulse-web`](https://github.com/KMM2019503/pulse-web) frontend.
 
 ## Stack
 
@@ -23,22 +23,27 @@ Backend server for Yok chat features, built with Bun, Express, Prisma (MongoDB),
 bun install
 ```
 
-2. Create a `.env` file:
+2. Create a `.env` file (copy the template, then fill it in):
+
+```bash
+cp .env.example .env
+```
+
+Key variables:
 
 ```env
 DATABASE_URL="mongodb+srv://<user>:<password>@<cluster>/<db>?retryWrites=true&w=majority"
 JWT_SECRET_KEY="<your-secret>"
-PORT=8888
+PORT=9999
 NODE_ENV=development
 
-# V2 API gate (required for any /v2 endpoint)
+# Required for any /v2 endpoint (otherwise 404)
 V2_INTERNAL_ENABLED=true
+# Optional extra header gate on /v2
+V2_INTERNAL_TOKEN=
 
-# Optional extra gate on /v2
-V2_INTERNAL_TOKEN=""
-
-# Optional (defined in env schema; currently not wired in `src/server.ts` CORS setup)
-CORS_ORIGIN="http://localhost:3000"
+# Origin(s) allowed to call the API / Socket.IO. Comma-separated for multiple.
+CORS_ORIGIN=http://localhost:3000
 ```
 
 3. Generate Prisma client and sync schema:
@@ -54,11 +59,29 @@ bunx prisma db push
 bun run dev
 ```
 
-Server starts from [`index.ts`](/Users/betterhr/Developer/personal/yok_server/index.ts) and listens on `PORT` (default `8888`).
+Server starts from [`index.ts`](index.ts) and listens on `PORT` (default `9999`).
+
+## Deploy
+
+The server needs **one long-running instance** (Socket.IO + `node-cron` rule out serverless). A portable [`Dockerfile`](Dockerfile) (based on `oven/bun`) is included, so it runs on Render, Railway, Fly.io, or any Docker host without code changes.
+
+```bash
+docker build -t pulse-api .
+docker run -p 9999:9999 --env-file .env pulse-api
+```
+
+On a PaaS (e.g. Render / Railway):
+
+1. Point the service at this repo; it auto-detects the `Dockerfile`.
+2. Set env vars from `.env.example` (the platform injects `PORT`).
+3. Set `CORS_ORIGIN` to your deployed `pulse-web` URL (HTTPS).
+4. Health check path: `/healthy`.
+
+> Scaling to multiple replicas requires a Socket.IO adapter (e.g. Redis) for cross-instance events — single instance is fine to start.
 
 ## Important: `/v2` Internal Gate
 
-All `/v2/*` routes are protected by [`internal-v2-gate.ts`](/Users/betterhr/Developer/personal/yok_server/src/v2/shared/middleware/internal-v2-gate.ts).
+All `/v2/*` routes are protected by [`internal-v2-gate.ts`](src/v2/shared/middleware/internal-v2-gate.ts).
 
 - If `V2_INTERNAL_ENABLED=false` (or unset), `/v2/*` returns `404`.
 - If `V2_INTERNAL_TOKEN` is set, clients must send header:
@@ -119,9 +142,9 @@ bun test
 
 ## Project Layout
 
-- [`src/server.ts`](/Users/betterhr/Developer/personal/yok_server/src/server.ts) - app bootstrap, middleware, health routes, cron, shutdown
-- [`src/v2/app/`](/Users/betterhr/Developer/personal/yok_server/src/v2/app) - v2 router setup
-- [`src/v2/modules/`](/Users/betterhr/Developer/personal/yok_server/src/v2/modules) - feature modules (auth, users, channels, messages, conversations)
-- [`src/v2/docs/openapi.ts`](/Users/betterhr/Developer/personal/yok_server/src/v2/docs/openapi.ts) - OpenAPI registry/document generation
-- [`socket/Socket.js`](/Users/betterhr/Developer/personal/yok_server/socket/Socket.js) - Socket.IO server and realtime events
-- [`prisma/schema.prisma`](/Users/betterhr/Developer/personal/yok_server/prisma/schema.prisma) - MongoDB data model
+- [`src/server.ts`](src/server.ts) - app bootstrap, middleware, health routes, cron, shutdown
+- [`src/v2/app/`](src/v2/app) - v2 router setup
+- [`src/v2/modules/`](src/v2/modules) - feature modules (auth, users, channels, messages, conversations)
+- [`src/v2/docs/openapi.ts`](src/v2/docs/openapi.ts) - OpenAPI registry/document generation
+- [`socket/Socket.js`](socket/Socket.js) - Socket.IO server and realtime events
+- [`prisma/schema.prisma`](prisma/schema.prisma) - MongoDB data model

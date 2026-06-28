@@ -14,6 +14,7 @@ import { deleteStaleFcmTokenServices } from "./v2/services/common.services.js";
 import cors from "cors";
 import { createV2App } from "./v2/app/create-app";
 import { registerSwaggerDocs } from "./v2/docs/swagger";
+import { corsOrigins } from "./v2/config/cors";
 
 
 dotenv.config(); // Load environment variables
@@ -35,7 +36,7 @@ const startServer = async() => {
   app.use(cookieParser());
   app.use(
     cors({
-      origin: "http://localhost:3000",
+      origin: corsOrigins,
       credentials: true,
     })
   )
