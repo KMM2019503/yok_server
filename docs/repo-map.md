@@ -211,7 +211,7 @@ adds `GEMINI_API_KEY`, `PERSONA_AI_MODEL`, `PERSONA_AI_ENABLED`).
 [`src/v2/docs/openapi.ts`](../src/v2/docs/openapi.ts) holds a manual `routes[]` array
 that mirrors the real Express routes (served via [`swagger.ts`](../src/v2/docs/swagger.ts)
 at `GET /docs` and `GET /openapi.json`). **Adding or changing a `/v2` route requires
-updating this array too**, or the docs drift. (The doc title is still "Yok Server API".)
+updating this array too**, or the docs drift. (The doc title is "Pulse Server API".)
 
 ---
 

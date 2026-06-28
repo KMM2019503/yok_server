@@ -809,10 +809,10 @@ const generator = new OpenApiGeneratorV3(registry.definitions);
 export const openApiDocument = generator.generateDocument({
   openapi: "3.0.0",
   info: {
-    title: "Yok Server API",
+    title: "Pulse Server API",
     version: "1.0.0",
     description:
-      "OpenAPI documentation for the Yok Server v2 endpoints. Most v2 routes require the internal token header and authenticated routes also require the token cookie.",
+      "OpenAPI documentation for the Pulse Server v2 endpoints. Most v2 routes require the internal token header and authenticated routes also require the token cookie.",
   },
   servers: [{ url: "/" }],
   tags: [

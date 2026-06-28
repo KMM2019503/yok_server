@@ -60,7 +60,7 @@ So a request can be validated twice. New rules should go in the Zod schema; only
 
 ### OpenAPI docs are hand-mirrored
 
-[`src/v2/docs/openapi.ts`](src/v2/docs/openapi.ts) holds a manual `routes[]` array that mirrors the real Express routes. **Adding or changing a `/v2` route requires updating this array too**, or the docs drift. Served at `GET /docs` (Swagger UI) and `GET /openapi.json`. (Note: the OpenAPI doc title is still "Yok Server API".)
+[`src/v2/docs/openapi.ts`](src/v2/docs/openapi.ts) holds a manual `routes[]` array that mirrors the real Express routes. **Adding or changing a `/v2` route requires updating this array too**, or the docs drift. Served at `GET /docs` (Swagger UI) and `GET /openapi.json`. (The OpenAPI doc title is "Pulse Server API".)
 
 ### Auth model
 
