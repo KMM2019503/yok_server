@@ -5,6 +5,7 @@ import userRoutes from "../modules/users/users.routes";
 import channelRoutes from "../modules/channels/channels.routes";
 import messageRoutes from "../modules/messages/messages.routes";
 import conversationRoutes from "../modules/conversations/conversations.routes";
+import friendRoutes from "../modules/friends/friends.routes";
 
 export const registerRoutes = (router: Router) => {
   router.get("/healthy", (_req: Request, res: Response) => {
@@ -20,4 +21,5 @@ export const registerRoutes = (router: Router) => {
   router.use("/channels", channelRoutes);
   router.use("/messages", messageRoutes);
   router.use("/conversations", conversationRoutes);
+  router.use("/friends", friendRoutes);
 };

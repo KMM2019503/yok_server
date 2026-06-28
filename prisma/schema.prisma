@@ -78,6 +78,8 @@ model FriendRequest {
   updatedAt  DateTime            @updatedAt
 
   @@unique([senderId, receiverId])
+  @@index([receiverId, status])
+  @@index([senderId, status])
   @@map("friend_requests")
 }
 
