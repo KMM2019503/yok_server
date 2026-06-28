@@ -15,11 +15,6 @@ Backend server for Yok chat features, built with Bun, Express, Prisma (MongoDB),
 - Bun `>=1.x`
 - MongoDB instance (local or hosted)
 
-Optional for containerized runs:
-
-- Docker
-- Docker Compose
-
 ## Quick Start (Local)
 
 1. Install dependencies:
@@ -121,24 +116,6 @@ Run all with:
 ```bash
 bun test
 ```
-
-## Docker
-
-Development compose:
-
-```bash
-source ./source_env.sh && docker-compose up --build
-```
-
-Production compose:
-
-```bash
-source ./source_env.sh && docker-compose -f docker-compose.prod.yml up --build -d
-```
-
-Note:
-
-- Compose maps host `3000:3000`, so set `PORT=3000` in `.env` for Docker runs (or change compose port mapping).
 
 ## Project Layout
 
