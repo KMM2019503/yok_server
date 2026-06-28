@@ -1,6 +1,6 @@
 # Feature: AI Persona Profiling ("character tags")
 
-**Status:** Planned. **Owner:** —. **Last updated:** 2026-06-28.
+**Status:** Phase 1 integrated across backend and frontend. **Owner:** —. **Last updated:** 2026-06-28.
 
 ## Goal
 
@@ -17,6 +17,45 @@ tags later power **friend** and **channel** suggestions.
 > `#extrovert` · `#horror-movies`
 > each carrying a **category** (profession / sport / fandom / personality / media)
 > and a **confidence**.
+
+## Current implementation status
+
+### Backend integrated
+
+- `UserProfile` + `ProfileStatus` are live in Prisma, including `SKIPPED`, `AWAITING_REVIEW`, `READY`, and `FAILED`.
+- Env wiring is done for `GEMINI_API_KEY`, `PERSONA_AI_MODEL`, and `PERSONA_AI_ENABLED`.
+- Gemini integration is implemented with `@google/genai`, a shared client, and an injectable `PersonaExtractor`.
+- Controlled vocabulary is implemented as a TS taxonomy with server-side validation and `suggestedTags` capture.
+- `profiles` module is wired end-to-end in `/v2` using the `friends/` module pattern.
+- Implemented routes:
+  - `POST /v2/profile/story`
+  - `POST /v2/profile/skip`
+  - `PUT /v2/profile/tags`
+  - `GET /v2/profile/me`
+  - `GET /v2/profile/:userId`
+- OpenAPI route mirroring is done in `src/v2/docs/openapi.ts`.
+- Unit tests for the service/repository seam are in place with a mocked extractor.
+
+### Frontend integrated
+
+- `pulse-web` now has a dedicated persona onboarding screen after signup.
+- Signup redirects to onboarding instead of straight to chat.
+- Root routing now decides between onboarding and chat based on the current profile state.
+- App guards for chat, friends, and nearby routes redirect users into onboarding until the profile is `READY` or `SKIPPED`.
+- Frontend API client + types + React Query hooks are implemented for:
+  - fetch my profile
+  - submit story
+  - confirm tags
+  - skip onboarding
+- Review UI is implemented for story entry, preview tags, confirm, retry, and skip flows.
+
+### Still not integrated
+
+- Friend suggestions (Phase 2).
+- Channel tagging / channel suggestions (Phase 3).
+- Async/background parsing workflow.
+- DB-backed editable taxonomy.
+- Full end-to-end browser QA with real Gemini responses across the whole UX.
 
 ## Decisions locked
 
@@ -238,15 +277,25 @@ Channel suggestions need channels to carry tags too — a later schema addition.
 
 ## Build checklist (Phase 1)
 
-- [ ] Add `UserProfile` + `ProfileStatus` to `prisma/schema.prisma`; `generate` + `db push`.
-- [ ] Add `GEMINI_API_KEY` / `PERSONA_AI_MODEL` / `PERSONA_AI_ENABLED` to `env.ts`.
-- [ ] `bun add @google/genai`.
-- [ ] `src/v2/shared/ai/gemini.ts` + `persona.extractor.ts` (injectable).
-- [ ] `src/v2/modules/profiles/` mirroring [`friends/`](../../src/v2/modules/friends/)
+- [x] Add `UserProfile` + `ProfileStatus` to `prisma/schema.prisma`; `generate` + `db push`.
+- [x] Add `GEMINI_API_KEY` / `PERSONA_AI_MODEL` / `PERSONA_AI_ENABLED` to `env.ts`.
+- [x] `bun add @google/genai`.
+- [x] `src/v2/shared/ai/gemini.ts` + `persona.extractor.ts` (injectable).
+- [x] `src/v2/modules/profiles/` mirroring [`friends/`](../../src/v2/modules/friends/)
       (routes, controller, service, repository, schema, mapper, types) + `taxonomy.ts`.
-- [ ] Register router in [`register-routes.ts`](../../src/v2/app/register-routes.ts).
-- [ ] Mirror routes into [`openapi.ts`](../../src/v2/docs/openapi.ts).
-- [ ] Unit tests with a mocked extractor (`bun test`); `bun run lint`.
+- [x] Register router in [`register-routes.ts`](../../src/v2/app/register-routes.ts).
+- [x] Mirror routes into [`openapi.ts`](../../src/v2/docs/openapi.ts).
+- [x] Unit tests with a mocked extractor (`bun test`).
+- [ ] Full repo-wide lint cleanup. The persona feature files are clean, but unrelated pre-existing lint issues still exist elsewhere in the repo.
+
+## Frontend checklist (Phase 1 companion)
+
+- [x] Add frontend API methods and types for profile onboarding.
+- [x] Redirect signup into persona onboarding.
+- [x] Add a dedicated onboarding page for story → preview → confirm / skip.
+- [x] Guard app routes until onboarding is completed or explicitly skipped.
+- [x] Add client-side retry/error handling for onboarding fetch + submit flows.
+- [ ] Manual browser QA against the live backend using a real Gemini API key.
 
 ## Open questions
 
